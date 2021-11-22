@@ -18,7 +18,6 @@
 # region 	asia | europe_russia | northamerica | southamerica | other 	– 	You can filter by multiple regions by including multiple query parameters, e.g region=asia&region=northamerica
 # tag 	– 	– 	You can filter by up to 5 tags by including multiple query parameters, e.g tag=feet&tag=bdsm
 # hd 	true | false 	– 	–
-# response: 
 # {
 # "username": "urdreamolivia69",
 # "spoken_languages": "English",
@@ -50,73 +49,78 @@
 # },
 require 'excon'
 require 'json'
-require "down"
-require "fileutils"
 require 'rubytools/array_table'
-require 'rubytools/hash_ext'
 require 'rubytools/fzf'
 
 display_count=500
 offset=ARGV.first || 0
 
-pickfile='picklist_ph'
-pickfile_beauty='picklist_beauty'
-picklist_ph=File.exists?(pickfile) ? File.read(pickfile).split("\n").uniq.map(&:strip) : %w[murbears_world marymoody cielo69_ candy_temptation_]
-picklist_beauty=File.exists?(pickfile_beauty) ? File.read(pickfile_beauty).split("\n").uniq.map(&:strip) : %w[murbears_world marymoody cielo69_ candy_temptation_]
 
-def download(image_url)
-  image_url
-  tempfile = Down.download(image_url)
-  FileUtils.mv(tempfile.path, "./media/#{tempfile.original_filename}")
-end
-
+picklist=File.exists?('picklist') ? File.read('picklist').split("\n").uniq.map(&:strip) : %w[murbears_world marymoody cielo69_ candy_temptation_]
+picklist=File.exists?('picklist_beauty') ? File.read('picklist_beauty').split("\n").uniq.map(&:strip) : %w[murbears_world marymoody cielo69_ candy_temptation_]
+# picklist= %w[murbears_world marymoody cielo69_ candy_temptation_ _stella_rose_]
 
 def get(offset, display_count=500)
-
-  p params={
-    wm: 'LVTEy',
-    client_ip: 'request_ip',
-    limit: display_count,
-    offset: offset,
-    gender: 'f',
-    format: 'json'
-  }
-  
-  # p url="https://chaturbate.com/api/public/affiliates/onlinerooms/?wm=LVTEy&client_ip=request_ip&limit=#{display_count}&offset=#{offset}&gender=f&format=json"
-  url="https://chaturbate.com/api/public/affiliates/onlinerooms/?#{params.to_query_string}"
-  response = Excon.get(url)
+url="https://chaturbate.com/api/public/affiliates/onlinerooms/?wm=LVTEy&client_ip=request_ip&limit=#{display_count}&offset=#{offset}&gender=f&format=json"
+  response = Excon.get(
+    url
+    # headers: {
+    # cache-control: 'max-age=30,public,must-revalidate,s-maxage=1800',
+    # content-type: 'application/json; charset=utf-8',
+    # format: 'json',
+    # gender: %w[f],
+    # region: 'asia'
+    # }
+  )
   JSON.parse(response.body)
 end
 
 df=[]
 location=Hash.new(0)
 names=[]
-25.times do | i |
-  data=get(i*500)
-  p 'page %d/%d' % [i, 25]
-  p data['results'].size if i > 2
-  break if data['results'].empty?
-  
-  keys=%w[image_url username location age current_show is_hd is_new num_followers iframe_embed]
+5.times do | i |
+   data=get(i*500)
+  # puts JSON.pretty_generate(data)
+    # puts JSON.pretty_generate(data
+    # .to_h
+    # .dig('results')
+    # # .dig('results', 'current_show', 'is_hd', 'is_new','location', 'username', 'display_name', 'age' , 'num_followers')
+    # )
+  keys=%w[image_url username location age current_show is_hd is_new num_followers]
   data
     .to_h
     .dig('results')
     .map{|r|
-      p r.values_at( 'username', 'tags', 'is_new') if r['is_new'] #picklist_ph.include?(r.fetch('username'))
+      # # df << r.values_at('image_url_360x270', 'current_show', 'is_hd', 'is_new','location', 'username', 'age' , 'num_followers') if /^1/.match(r.values_at('age').first&.to_s)
       location[r.values_at('location').first]+=1
-      df << r.values_at(*keys) if (/hilipp/i).match(r.fetch('location'))
-      df << r.values_at(*keys) if picklist_ph.include?(r.fetch('username')) #and !(/ppine/i).match(r.values_at('location').first&.to_s)
-      df << r.values_at(*keys) if picklist_beauty.include?(r.fetch('username')) #and !(/ppine/i).match(r.values_at('location').first&.to_s)
-      # df << r.values_at(*keys) if r['is_new'] && (r['age'] && r['age'] <= 20 )
-      df << r.values_at(*keys) if (r['age'] && r['age'] < 20 )
+      df << r.values_at(*keys) if (/philip/i).match(r.values_at('location').first)
+      df << r.values_at(*keys) if picklist.include?(r.values_at('username').first) #and !(/ppine/i).match(r.values_at('location').first&.to_s)
+      df << r.values_at(*keys) if picklist_beauty.include?(r.values_at('username').first) #and !(/ppine/i).match(r.values_at('location').first&.to_s)
+      df << r.values_at(*keys) if r.values_at('is_new').first
+      # names << r.values_at('username').first
     }
-  sleep 0.5
+  sleep 1
 end
 
-File.open('data.txt', 'w') do |f|
-  df.map.with_index{|e, i|
-    f.puts e.values_at(0, 1, 2, 3, -1).join('\\')
-    download(e.values_at(0).first)
-  }#.fzf_preview("mpv {+1}")
-end
+# p names.sort
+# 
+# # puts df.to_table(delim: ' ') unless df.empty?
+# require "down"
+# require "fileutils"
+# 
+# def download(image_url)
+  # tempfile = Down.download(image_url)
+  # FileUtils.mv(tempfile.path, "./#{tempfile.original_filename}")
+# end
+
+df.uniq.map.with_index{|e, i|
+  # print "%02f%%\r" % [(i/df.size.to_f)*100]
+  # p e.values_at(0, 1, 2, 3)
+  puts e.values_at(0, 1, 2, 3).join('\\')
+  # download(url)
+}#.fzf_preview("mpv {+1}")
+
+# puts df.to_table
+
+# puts location.sort_by{|k, v| v}.reverse.to_h
 IO.write('location.json', JSON.pretty_generate(location.sort_by{|k, v| v}.reverse.to_h))
