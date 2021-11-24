@@ -10,8 +10,8 @@ Cuba.class_eval do
       html do
         head do
           meta('http-equiv': 'refresh', content: '120')
-          # link(rel: 'stylesheet', type: "text/css",  href: '/css/style.css')
-          link(rel: 'stylesheet', type: 'text/css', href: '/media/style.css')
+          link(rel: 'stylesheet', type: "text/css",  href: '/css/style.css')
+          # link(rel: 'stylesheet', type: 'text/css', href: '/media/style.css')
         end
         body do
           h1 { 'Layout here' }
@@ -36,11 +36,25 @@ Cuba.define do
     end
 
     rooms = File.read('./data.txt').split("\n")
-    on root do
+
+    on 'rooms/:page' do |pg|
+      page=pg.to_i-1
+      offset=200
+      pages=(rooms.size/offset.to_f).ceil
+      
       render(use_layout: true) do
         div do
-          p { "number of rooms: #{rooms.uniq.size}" }
-          rooms.uniq.each do |u|
+          p do
+            # "page #{page+1} of #{pages}"
+            "room(s): #{page*offset}..#{(page*offset+offset-1)}"
+          end
+          p do            
+            pages.times do |i|
+              a( href: "/rooms/#{i+1}"){ b(class: 'page'){"#{i+1}"} }
+              span{'&nbsp;&nbsp;'}
+            end
+          end
+          rooms[page*offset..(page*offset+offset-1)].each do |u|
             i, user, loc, _, iframe_embbed = u.split('\\')
             div(class: 'grid') do
               a(href: "https://chaturbate.com/#{user}/") { img(src: "/media/#{user}.jpg") }
@@ -48,10 +62,17 @@ Cuba.define do
                 p{ user  }
                 p{ loc } 
               }
-            end
+            end            
           end
         end
       end
+    end
+    
+    on root do
+      res.redirect '/rooms/1'
+    end
+    on default do
+      res.html 'page not found'
     end
   end
 end

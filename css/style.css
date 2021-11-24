@@ -1,0 +1,56 @@
+body{
+  /* width: 1400px; */
+  height: 100%;
+  background: black;
+  color: white;
+}
+img{
+  width: 200px;
+  height: 132px;
+  -moz-transform: scale(1);
+}
+.user, .loc{
+  line-height: 0.8;
+  /* background: red; */
+  padding: 0;
+  margin: 0;
+}
+.user{
+  color: yellow;
+}
+.grid 
+{
+  line-height: 0.8;
+  float :left;
+  width: 16%;
+  padding:0;
+  margin:0;
+  position: relative;
+  left: 0;  
+}
+div.grid:hover{
+  -moz-transform: scale(1.05);
+  z-index: 3;
+  position: relative;
+  background: black;
+}
+
+div p{
+  font-size: 10px;
+  line-height: 0.8;
+  position: relative;
+  left: 0;  
+  padding:0;
+  margin:0;
+  border: 1px dotted black;
+  width: 100%;
+  height: 3%;
+  overflow: hidden;
+  white-space: nowrap; /* Don't forget this one */
+  text-overflow: ellipsis;  
+  /* -moz-transform: scale(0.8); */
+}
+
+b.page{
+  font-size: 24px;
+}
