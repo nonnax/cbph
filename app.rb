@@ -57,7 +57,7 @@ Cuba.define do
           rooms[page*offset..(page*offset+offset-1)].each do |u|
             i, user, loc, _, iframe_embbed = u.split('\\')
             div(class: 'grid') do
-              a(href: "https://chaturbate.com/#{user}/") { img(src: "/media/#{user}.jpg") }
+              div(class: 'center'){a(href: "https://chaturbate.com/#{user}/") { img(src: "/media/#{user}.jpg") }}
               div(class: 'user') { 
                 p{ user  }
                 p{ loc } 
