@@ -55,51 +55,55 @@ require "fileutils"
 require 'rubytools/array_table'
 require 'rubytools/hash_ext'
 require 'rubytools/fzf'
+require 'celluloid'
+require 'celluloid/pool'
+require 'benchmark'
 
-display_count=500
-offset=ARGV.first || 0
+Celluloid.boot
 
-pickfile='picklist_ph'
-pickfile_beauty='picklist_beauty'
-picklist_ph=File.exists?(pickfile) ? File.read(pickfile).split("\n").uniq.map(&:strip) : %w[murbears_world marymoody cielo69_ candy_temptation_]
-picklist_beauty=File.exists?(pickfile_beauty) ? File.read(pickfile_beauty).split("\n").uniq.map(&:strip) : %w[murbears_world marymoody cielo69_ candy_temptation_]
-
-def download(image_url)
-  tempfile = Down.download(image_url)
-  FileUtils.mv(tempfile.path, "./media/#{tempfile.original_filename}")
-end
-
-
-def get(offset, display_count=500)
-
-  p params={
-    wm: 'LVTEy',
-    client_ip: 'request_ip',
-    limit: display_count,
-    offset: offset,
-    gender: 'f',
-    format: 'json'
-  }
+class CBUpdater
+  # include Celluloid
+  attr :picklist_ph, :picklist_beauty
+  attr_accessor :df
+  def initialize
+    @df=[]
+    @data_file='data.txt'
+    File.write(@data_file, '')
+    pickfile='picklist_ph'
+    pickfile_beauty='picklist_beauty'
+    @picklist_ph=File.exists?(pickfile) ? File.read(pickfile).split("\n").uniq.map(&:strip) : %w[murbears_world marymoody cielo69_ candy_temptation_]
+    @picklist_beauty=File.exists?(pickfile_beauty) ? File.read(pickfile_beauty).split("\n").uniq.map(&:strip) : %w[murbears_world marymoody cielo69_ candy_temptation_]  
+  end
   
-  # p url="https://chaturbate.com/api/public/affiliates/onlinerooms/?wm=LVTEy&client_ip=request_ip&limit=#{display_count}&offset=#{offset}&gender=f&format=json"
-  url="https://chaturbate.com/api/public/affiliates/onlinerooms/?#{params.to_query_string}"
-  response = Excon.get(url)
-  JSON.parse(response.body)
-end
+  def download(image_url)
+    tempfile = Down.download(image_url)
+    FileUtils.mv(tempfile.path, "./media/#{tempfile.original_filename}")
+  end
+  def get(offset, display_count=500)
+    params={
+      wm: 'LVTEy',
+      client_ip: 'request_ip',
+      limit: display_count,
+      offset: offset,
+      gender: 'f',
+      format: 'json'
+    }
+    # p url="https://chaturbate.com/api/public/affiliates/onlinerooms/?wm=LVTEy&client_ip=request_ip&limit=#{display_count}&offset=#{offset}&gender=f&format=json"
+    url="https://chaturbate.com/api/public/affiliates/onlinerooms/?#{params.to_query_string}"
+    response = Excon.get(url)
+    JSON.parse(response.body)
+  end
 
-df=[]
-location=Hash.new(0)
-names=[]
-threads=[]
-max_loops=50
-
-30.times do | i |
+  def save(i)
+    # display_count=500
+    # offset=ARGV.first || 0
+    p i
+    location=Hash.new(0)
     row = []  
     data=get(i*500)
     
-    break if data['results'].empty?
+    return if data['results'].empty?
 
-    p 'page %d/%d' % [i, max_loops]
     p data['results'].size if i > 2
     
     keys=%w[image_url username location age current_show is_hd is_new num_followers iframe_embed]
@@ -107,35 +111,39 @@ max_loops=50
       .to_h
       .dig('results')
       .map do |r|
-        # p r.values_at( 'username', 'tags') if r['is_new']
         location[r.values_at('location').first]+=1
         row << r.values_at(*keys) if (/hilipp/i).match(r.fetch('location',''))
         row << r.values_at(*keys) if r['is_new']
-        # row << r.values_at(*keys) if (picklist_beauty+picklist_ph).include?(r.fetch('username'))
         row << r.values_at(*keys) if (picklist_ph).include?(r.fetch('username'))
         row << r.values_at(*keys) if (r['age'] && r['age'] < 20 )
       end
-      
-    df += row.uniq
+
+    t=[]
+    @df += row.uniq
     row.dup.uniq.each do | r|
-      threads<<Thread.new do
-        download(r.first)
-      end
+      t<<Thread.new{download(r.first)}
     end
-    sleep 0.25
-end
-
-
-threads<< Thread.new do
-  File.open('data.txt', 'w') do |f|
-    df.map.with_index do |e, i|
-      f.puts e.values_at(0, 1, 2, 3, -1).join('\\')
+    sleep 1
+    t.join
+  end
+  
+  def save_data_file
+    File.open(@data_file, 'a') do |f|
+      @df.dup.map.with_index do |e, i|
+        f.puts e.values_at(0, 1, 2, 3, -1).map(&:to_s).join('\\')
+      end
     end
   end
 end
 
-# threads<< Thread.new do
-  # IO.write('location.json', JSON.pretty_generate(location.sort_by{|k, v| v}.reverse.to_h))
-# end
 
-threads.map(&:join)
+worker=CBUpdater.new
+t=[]
+puts Benchmark.measure {
+  10.times do | i |
+      worker.save(i)
+  end
+  t<<Thread.new{worker.save_data_file}
+  t.join
+
+}

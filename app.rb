@@ -9,7 +9,7 @@ Cuba.class_eval do
     Scooby.dooby do
       html do
         head do
-          meta('http-equiv': 'refresh', content: '60')
+          meta('http-equiv': 'refresh', content: '120')
           # link(rel: 'stylesheet', type: "text/css",  href: '/css/style.css')
           link(rel: 'stylesheet', type: 'text/css', href: '/media/style.css')
         end
@@ -44,8 +44,10 @@ Cuba.define do
             i, user, loc, _, iframe_embbed = u.split('\\')
             div(class: 'grid') do
               a(href: "https://chaturbate.com/#{user}/") { img(src: "/media/#{user}.jpg") }
-              p { user }
-              p { loc }
+              div(class: 'user') { 
+                p{ user  }
+                p{ loc } 
+              }
             end
           end
         end
