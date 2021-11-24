@@ -55,6 +55,7 @@ require "fileutils"
 require 'rubytools/array_table'
 require 'rubytools/hash_ext'
 require 'rubytools/fzf'
+require 'benchmark'
 
 display_count=500
 offset=ARGV.first || 0
@@ -93,7 +94,9 @@ names=[]
 threads=[]
 max_loops=50
 
-30.times do | i |
+puts Benchmark.measure {
+
+20.times do | i |
     row = []  
     data=get(i*500)
     
@@ -126,16 +129,16 @@ max_loops=50
 end
 
 
-threads<< Thread.new do
-  File.open('data.txt', 'w') do |f|
-    df.map.with_index do |e, i|
-      f.puts e.values_at(0, 1, 2, 3, -1).join('\\')
+  threads<< Thread.new do
+    File.open('data.txt', 'w') do |f|
+      df.map.with_index do |e, i|
+        f.puts e.values_at(0, 1, 2, 3, -1).join('\\')
+      end
     end
   end
-end
 
-# threads<< Thread.new do
-  # IO.write('location.json', JSON.pretty_generate(location.sort_by{|k, v| v}.reverse.to_h))
-# end
-
-threads.map(&:join)
+  # threads<< Thread.new do
+    # IO.write('location.json', JSON.pretty_generate(location.sort_by{|k, v| v}.reverse.to_h))
+  # end
+  threads.map(&:join)
+}
