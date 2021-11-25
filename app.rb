@@ -3,6 +3,7 @@
 
 # Id$ nonnax 2021-11-04 21:05:10 +0800
 require 'rubytools/cubadoo'
+require 'csv'
 
 Cuba.class_eval do
   def _layout(&block)
@@ -35,7 +36,7 @@ Cuba.define do
       end
     end
 
-    rooms = File.read('./data.txt').split("\n")
+    rooms = CSV.read('./data.csv')
 
     on 'rooms/:page' do |pg|
       page=pg.to_i-1
@@ -45,8 +46,7 @@ Cuba.define do
       render(use_layout: true) do
         div do
           p do
-            # "page #{page+1} of #{pages}"
-            "room(s): #{page*offset}..#{(page*offset+offset-1)}"
+            "room(s): #{page*offset}..#{(page*offset+offset-1)} (#{page+1}/#{pages})"
           end
           p do            
             pages.times do |i|
@@ -55,7 +55,7 @@ Cuba.define do
             end
           end
           rooms[page*offset..(page*offset+offset-1)].each do |u|
-            i, user, loc, _, iframe_embbed = u.split('\\')
+            i, user, loc, _, iframe_embbed = u#.split('\\')
             div(class: 'grid') do
               div(class: 'center'){a(href: "https://chaturbate.com/#{user}/") { img(src: "/media/#{user}.jpg") }}
               div(class: 'user') { 

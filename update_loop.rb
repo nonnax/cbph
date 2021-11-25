@@ -4,7 +4,7 @@ require 'benchmark'
 loop do
   puts Benchmark.measure{
     puts 'fetching...'
-    Thread.new{IO.popen("./cbph.rb", &:read)}.join
+    Thread.new{IO.popen("./cbph_class.rb", &:read)}.join
     puts 'ready!'
   }
   sleep 180

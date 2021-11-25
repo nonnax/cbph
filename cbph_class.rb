@@ -54,19 +54,26 @@ require "down"
 require "fileutils"
 require 'rubytools/array_table'
 require 'rubytools/hash_ext'
+require 'rubytools/thread_ext'
 require 'rubytools/fzf'
-require 'celluloid'
-require 'celluloid/pool'
+require 'forwardable'
+require 'csv'
+# require 'celluloid'
+# require 'celluloid/pool'
 require 'benchmark'
 
-Celluloid.boot
+# Celluloid.boot
 
 class CBUpdater
+  extend Forwardable
+
   # include Celluloid
+  def_delegators :@df, :map, :each
   attr :picklist_ph, :picklist_beauty
-  attr_accessor :df
+  attr_accessor :df, :th
   def initialize
     @df=[]
+    @th=[]
     @data_file='data.txt'
     File.write(@data_file, '')
     pickfile='picklist_ph'
@@ -94,45 +101,53 @@ class CBUpdater
     JSON.parse(response.body)
   end
 
-  def save(i)
+  def populate_df(i)
     # display_count=500
     # offset=ARGV.first || 0
-    p i
-    location=Hash.new(0)
-    row = []  
-    data=get(i*500)
-    
-    return if data['results'].empty?
+      p i
+      location=Hash.new(0)
+      row = []  
+      data=get(i*500)
+      
+      return if data['results'].empty?
 
-    p data['results'].size if i > 2
-    
-    keys=%w[image_url username location age current_show is_hd is_new num_followers iframe_embed]
-    data
-      .to_h
-      .dig('results')
-      .map do |r|
-        location[r.values_at('location').first]+=1
-        row << r.values_at(*keys) if (/hilipp/i).match(r.fetch('location',''))
-        row << r.values_at(*keys) if r['is_new']
-        row << r.values_at(*keys) if (picklist_ph).include?(r.fetch('username'))
-        row << r.values_at(*keys) if (r['age'] && r['age'] < 20 )
-      end
+      p data['results'].size if i > 2
+      
+      keys=%w[image_url username location age current_show is_hd is_new num_followers iframe_embed]
+      data
+        .to_h
+        .dig('results')
+        .map do |r|
+          location[r.values_at('location').first]+=1
+          row << r.values_at(*keys) if (/hilipp/i).match(r.fetch('location',''))
+          row << r.values_at(*keys) if r['is_new']
+          row << r.values_at(*keys) if (picklist_ph).include?(r.fetch('username'))
+          row << r.values_at(*keys) if (r['age'] && r['age'] < 20 )
+        end
 
-    t=[]
-    @df += row.uniq
-    row.dup.uniq.each do | r|
-      t<<Thread.new{download(r.first)}
-    end
-    sleep 1
-    t.join
+      # t=[]
+      @df += row.uniq
+      download_media_files( row )
+      # sleep 1
   end
   
-  def save_data_file
-    File.open(@data_file, 'a') do |f|
-      @df.dup.map.with_index do |e, i|
-        f.puts e.values_at(0, 1, 2, 3, -1).map(&:to_s).join('\\')
-      end
+  def download_media_files(row)
+    t=[]
+    row.each do | r|
+      t<<Thread.new{download(r.dup.first)}
     end
+    t.map(&:join)
+  end
+  def save_data_file
+      t=[]
+      t<<Thread.new {
+        CSV.open('data.csv', 'w') do |csv|
+          @df.dup.map.with_index do |e, i|
+            csv << e.values_at(0, 1, 2, 3, -1)
+          end
+        end
+      }
+      t.map(&:join)
   end
 end
 
@@ -140,10 +155,10 @@ end
 worker=CBUpdater.new
 t=[]
 puts Benchmark.measure {
-  10.times do | i |
-      worker.save(i)
+  11.times do | i |
+      worker.populate_df(i)
   end
-  t<<Thread.new{worker.save_data_file}
-  t.join
-
+  worker.save_data_file
+  t.map(&:join)
 }
+
