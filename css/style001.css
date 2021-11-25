@@ -4,21 +4,30 @@ body{
   background: black;
   color: white;
 }
+a{
+  text-decoration: none;
+  color: cyan;
+}
+a:hover{
+  color: magenta;
+  /* border-top: 0.5px solid yellow; */
+}
 img{
-  width: 240px;
-  height: 160px;
+  width: 200px;
+  height: 120px;
   -moz-transform: scale(1);
 }
 
 .grid 
 {
   float :left;
-  width: 20%;
-  padding:0;
-  margin:0;
+  width: 16%;
+  padding: 1px;
+  margin: 2px; 
+  border: 1px solid magenta;
 }
 div.grid:hover{
-  -moz-transform: scale(1.05);
+  -moz-transform: scale(1.025);
   z-index: 3;
   position: relative;
   background: black;
@@ -38,7 +47,7 @@ div.grid:hover{
   -moz-transform: scale(0.9);
 }
 
-.center {
+.center, .center > a {
   text-align: center;
 }
 
@@ -63,4 +72,54 @@ div.grid:hover{
   content: "";
   clear: both;
   display: table;
+}
+p > form{
+  position: relative;
+  display: block;
+  float: right; 
+}
+#banner{
+  width: 100%
+  padding: 0;
+  margin: 0;
+}
+#home {
+  position: absolute;
+  top: -25px;
+  left: 5px;
+  width: 50%
+  padding: 0;
+  margin: 0;
+}
+
+#search{
+  padding: 0;
+  margin: 0;
+  float: right
+  width: 50%;
+  line-height: 0.8;
+  text-align: right;
+}
+#search>form{
+  padding: 0;
+  margin: 0;  
+}
+.page{
+  text-align: center;
+  margin: 5px;
+  font-size: 25px;
+}
+.pages{
+  text-align: center;
+  margin: 5px;
+  width: 100%;
+}
+.location > a{
+   line-height: 0.8;
+   font-size: 10px;
+   color: white;
+   text-decoration: none;
+}
+.location > a:hover{
+  color: magenta;
 }

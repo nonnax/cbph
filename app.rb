@@ -8,92 +8,91 @@ require 'cgi'
 
 Cuba.class_eval do
   def _layout(&block)
-    Scooby.dooby do
-      html do
-        head do
-          meta('http-equiv': 'refresh', content: '120')
-          # link(rel: 'stylesheet', type: "text/css",  href: '/css/style.css')
-          link(rel: 'stylesheet', type: 'text/css', href: '/css/style001.css')
-        end
-        body do
-          h1 { 'Layout here' }          
-          p do
-            form(action: '/search', method: 'get') do
-              input( type: 'text', name: 'q' )
-              input( type: 'submit', value: 'search')
+    html_ do
+      head_ do
+        meta_('http-equiv': 'refresh', content: '120')
+        # link(rel: 'stylesheet', type: "text/css",  href: '/css/style.css')
+        link_(rel: 'stylesheet', type: 'text/css', href: '/css/style001.css')
+      end
+      body_ do        
+        div_( id: 'banner') do
+          div_( id: 'home' ){
+            a_( href: '/'){h1_ { '..:: MetaCamVerse ::..' } }
+            span_{'..:: veni vidi vici  ::..'}
+          }          
+          div_( id: 'search' ) do
+            form_(action: '/search', method: 'get') do
+              input_(type: 'text', name: 'q')
+              input_(type: 'submit', value: 'search')
             end
           end
-          div(id: 'content', &block)
+        end
+        div_(id: 'content', &block)
+      end
+    end
+  end
+
+  def location_links(rooms)
+    div_(class: 'location') do
+      rooms.map { |r| r[2] }.uniq.map do |loc|
+        a_(class: 'page', href: "/search/#{loc}/1") { loc }
+      end
+    end
+  end
+
+  def page_info(page, pages, _offset = 200)
+    div_ do
+      "(#{page + 1} of #{pages})"
+    end
+  end
+
+  def rooms_tile(vrooms, page)
+    rooms = vrooms.uniq.sort_by { |r| r[-2].to_i }.reverse
+    offset = 200
+
+    div_ do
+      rooms[page * offset..(page * offset + offset - 1)].map do |u|
+        i, user, loc, age, num_followers, chat_room_url_revshare = u
+        div_(class: 'grid') do
+          div_(class: 'center') do
+            a_(href: chat_room_url_revshare, target: '_blank') do
+              img_(src: "/media/#{user}.jpg")
+            end
+          end
+          div_(class: 'user') do
+            p_ { user }
+            p_ { loc }
+            p_ { num_followers }
+          end
         end
       end
     end
   end
-  def location_links(rooms)
-     Scooby.dooby do
-        div do
-          rooms.map{|r| r[2] }.uniq.map do |loc|
-            a( href: "/search/#{loc}/1"){ loc }
-            span{'&nbsp;'}
-          end
-        end
-     end
-  end
 
-  def page_info(page, pages, offset=200)
-     Scooby.dooby do
-        p do
-          "(#{page+1} of #{pages})"
-        end
-     end
-  end
-  
-  def rooms_tile(vrooms, page)
-    rooms=vrooms.uniq.sort_by{|r| r[-2].to_i }.reverse
-    offset=200
-    Scooby.dooby do
-      div do
-          rooms[page*offset..(page*offset+offset-1)].map do |u|
-            i, user, loc, age, num_followers, chat_room_url_revshare = u
-            div(class: 'grid') do
-              div(class: 'center'){a( href: chat_room_url_revshare, target: "_blank") { img(src: "/media/#{user}.jpg") }}
-              div(class: 'user') { 
-                p{ user  }
-                p{ loc } 
-                p{ num_followers } 
-              }
-            end            
+  def render_rooms(vrooms, q = '', pg = 1)
+    rooms = vrooms
+    page = pg.to_i - 1
+    offset = 200
+    pages = (rooms.size / offset.to_f).floor
+    links = location_links(rooms)
+    rooms_tile_view = rooms_tile(rooms, page)
+    page_info_view = page_info(page, pages)
+    render(layout: true) do
+      div_ do
+        p_ { page_info_view }
+        div_(class: 'pages') do
+          pages.times do |i|
+            a_(class: 'page', href: "/search/#{q}/#{i + 1}") { b_ { (i + 1) } }
           end
-      end    
+        end
+        p_ { links }
+        p_ { rooms_tile_view }
+        div_(class: 'clearfix') { hr_ }
+        p_ { links }
+      end
     end
   end
-  
-  def render_rooms(vrooms, q='', pg=1 )
-      rooms=vrooms
-      page=pg.to_i-1
-      offset=200
-      pages=(rooms.size/offset.to_f).ceil
-      links=location_links(rooms)
-      rooms_tile_view=rooms_tile(rooms, page)
-      page_info_view=page_info(page, pages)
-      render(use_layout: true) do
-        div do
-          p { page_info_view }
-          p do            
-            pages.times do |i|
-              a( href: "/search/#{q}/#{i+1}"){ b(class: 'page'){"#{i+1}"} }
-              span{'&nbsp;&nbsp;'}
-            end
-          end
-          p{ links }
-          p{ rooms_tile_view }
-          div(class: 'clearfix'){ hr }
-          p{ links }
-        end
-      end    
-  end
 end
-
-
 
 Cuba.define do
   rooms = CSV.read('./data.csv')
@@ -101,7 +100,7 @@ Cuba.define do
   on get do
     # /media/style.css
     on 'styler', extension('css') do |file|
-      render(use_layout: true) { "Filename: #{file}" } #=> "Filename: style"
+      render(layout: true) { "Filename: #{file}" } #=> "Filename: style"
     end
     # /search?q=barbaz
     on 'search', param('q') do |q|
@@ -109,37 +108,36 @@ Cuba.define do
     end
 
     on 'rooms/:page' do |pg|
-      page=pg.to_i-1
-      offset=200
-      pages=(rooms.size/offset.to_f).ceil
-      rooms_tile_view=rooms_tile(rooms, page)
-      page_info_view=page_info(page, pages)
-      render(use_layout: true) do
-        div do
-          p { page_info_view }
-          p do            
+      page = pg.to_i - 1
+      offset = 200
+      pages = (rooms.size / offset.to_f).floor
+      rooms_tile_view = rooms_tile(rooms, page)
+      page_info_view = page_info(page, pages)
+      render(layout: true) do
+        div_ do
+          p_ { page_info_view }
+          div_(class: 'pages') do
             pages.times do |i|
-              a( href: "/rooms/#{i+1}"){ b(class: 'page'){ "#{i+1}" } }
-              span{'&nbsp;&nbsp;'}
+              a_(class: 'page', href: "/rooms/#{i + 1}") { b_{ i + 1 } }
+              span_ { ' ' }
             end
           end
-          p { rooms_tile_view }
+          p_ { rooms_tile_view }
         end
       end
     end
 
     on 'search/:loc/:page' do |loc, page|
-       loc_decoded=CGI.unescape(loc)
-       rooms = CSV.read('./data.csv')
-       rooms=rooms.select{|r| (/#{loc_decoded}/i).match(r[2])}
-       render_rooms(rooms,loc,page)
-    end    
+      loc_decoded = CGI.unescape(loc)
+      rooms = CSV.read('./data.csv')
+      rooms = rooms.select { |r| (/#{loc_decoded}/i).match(r[2]) }
+      render_rooms(rooms, loc, page)
+    end
     on root do
       res.redirect '/rooms/1'
     end
     on default do
-      res.html 'page not found'
+      render(layout: true){ h1_ 'page not found'}
     end
   end
 end
-
