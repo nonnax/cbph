@@ -132,7 +132,7 @@ end
   threads<< Thread.new do
     File.open('data.txt', 'w') do |f|
       df.map.with_index do |e, i|
-        f.puts e.values_at(0, 1, 2, 3, -1).join('\\')
+        f.puts e.values_at(0, 1, 2, 3, -2, -1).join('\\')
       end
     end
   end

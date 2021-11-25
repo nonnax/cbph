@@ -58,7 +58,7 @@ class CBUpdater
     return [] if data['results'].empty?
     p [i, data['results'].size]
 
-    keys = %w[image_url username location age current_show is_hd is_new num_followers iframe_embed]
+    keys = %w[image_url username location age current_show is_hd is_new num_followers chat_room_url_revshare]
     data
       .to_h['results']
       .map do |r|
@@ -82,7 +82,7 @@ class CBUpdater
   def save_data_file
     CSV.open('data.csv', 'w') do |csv|
       @df.dup.map.with_index do |e, _i|
-        csv << e.values_at(0, 1, 2, 3, -1)
+        csv << e.values_at(0, 1, 2, 3, -2, -1)
       end
     end
   end
