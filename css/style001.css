@@ -5,36 +5,37 @@ body{
   color: white;
 }
 img{
-  width: 200px;
-  height: 132px;
+  width: 240px;
+  height: 160px;
   -moz-transform: scale(1);
 }
-.user, .loc{
-  line-height: 0.8;
-  /* background: red; */
-  padding: 0;
-  margin: 0;
-}
-.user{
-  color: cyan;
-}
+
 .grid 
 {
-  /* text-align: center; */
-  line-height: 0.8;
   float :left;
-  width: 16%;
-  margin:5px;
+  width: 20%;
   padding:0;
-  left: 0;
-  border: 1px solid magenta;
+  margin:0;
 }
-
 div.grid:hover{
   -moz-transform: scale(1.05);
   z-index: 3;
   position: relative;
   background: black;
+}
+
+.user > p{
+  position: relative;
+  left: 0;  
+  padding:0;
+  margin:0;
+  border: 1px dotted black;
+  width: 100%;
+  height: 3%;
+  overflow: hidden;
+  white-space: nowrap; /* Don't forget this one */
+  text-overflow: ellipsis;  
+  -moz-transform: scale(0.9);
 }
 
 .center {
@@ -58,23 +59,8 @@ div.grid:hover{
   /* border: 0.5px solid white; */
 
 }
-
-.grid > p {
-  position: relative;
-  text-align: left;
-  left: 10px;
-}
-
-b.page{
-  font-size: 24px;
-}
 .clearfix::after {
   content: "";
   clear: both;
   display: table;
-}
-hr{
-  width: 1000px;
-  display: block;
-  clear:both;
 }
