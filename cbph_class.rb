@@ -58,16 +58,15 @@ require 'rubytools/thread_ext'
 require 'rubytools/fzf'
 require 'forwardable'
 require 'csv'
-# require 'celluloid'
-# require 'celluloid/pool'
+require 'celluloid'
+require 'celluloid/pool'
 require 'benchmark'
 
-# Celluloid.boot
+Celluloid.boot
 
 class CBUpdater
   extend Forwardable
-
-  # include Celluloid
+  include Celluloid
   def_delegators :@df, :map, :each
   attr :picklist_ph, :picklist_beauty
   attr_accessor :df, :th
@@ -78,13 +77,14 @@ class CBUpdater
     File.write(@data_file, '')
     pickfile='picklist_ph'
     pickfile_beauty='picklist_beauty'
-    @picklist_ph=File.exists?(pickfile) ? File.read(pickfile).split("\n").uniq.map(&:strip) : %w[murbears_world marymoody cielo69_ candy_temptation_]
-    @picklist_beauty=File.exists?(pickfile_beauty) ? File.read(pickfile_beauty).split("\n").uniq.map(&:strip) : %w[murbears_world marymoody cielo69_ candy_temptation_]  
+    default_list=%w[murbears_world marymoody cielo69_ candy_temptation_]
+    @picklist_ph=File.exists?(pickfile) ? File.read(pickfile).split("\n").uniq.map(&:strip) : default_list
+    @picklist_beauty=File.exists?(pickfile_beauty) ? File.read(pickfile_beauty).split("\n").uniq.map(&:strip) : default_list
   end
   
   def download(image_url)
-    tempfile = Down.download(image_url)
-    FileUtils.mv(tempfile.path, "./media/#{tempfile.original_filename}")
+    tmp = Down.download(image_url, max_size: 24*1024) #24kb
+    FileUtils.mv(tmp.path, "./media/#{tmp.original_filename}")
   end
   def get(offset, display_count=500)
     params={
@@ -95,70 +95,53 @@ class CBUpdater
       gender: 'f',
       format: 'json'
     }
-    # p url="https://chaturbate.com/api/public/affiliates/onlinerooms/?wm=LVTEy&client_ip=request_ip&limit=#{display_count}&offset=#{offset}&gender=f&format=json"
     url="https://chaturbate.com/api/public/affiliates/onlinerooms/?#{params.to_query_string}"
     response = Excon.get(url)
     JSON.parse(response.body)
   end
 
   def populate_df(i)
-    # display_count=500
-    # offset=ARGV.first || 0
-      p i
-      location=Hash.new(0)
       row = []  
       data=get(i*500)
       
       return if data['results'].empty?
-
-      p data['results'].size if i > 2
+      p [i, data['results'].size]
       
       keys=%w[image_url username location age current_show is_hd is_new num_followers iframe_embed]
       data
         .to_h
         .dig('results')
         .map do |r|
-          location[r.values_at('location').first]+=1
           row << r.values_at(*keys) if (/hilipp/i).match(r.fetch('location',''))
           row << r.values_at(*keys) if r['is_new']
           row << r.values_at(*keys) if (picklist_ph).include?(r.fetch('username'))
           row << r.values_at(*keys) if (r['age'] && r['age'] < 20 )
         end
 
-      # t=[]
       @df += row.uniq
       download_media_files( row )
-      # sleep 1
+      # sleep 2
   end
   
   def download_media_files(row)
-    t=[]
-    row.each do | r|
-      t<<Thread.new{download(r.dup.first)}
+    row.each do |r|
+        download(r.dup.first) 
     end
-    t.map(&:join)
   end
   def save_data_file
-      t=[]
-      t<<Thread.new {
-        CSV.open('data.csv', 'w') do |csv|
-          @df.dup.map.with_index do |e, i|
-            csv << e.values_at(0, 1, 2, 3, -1)
-          end
-        end
-      }
-      t.map(&:join)
+    CSV.open('data.csv', 'w') do |csv|
+      @df.dup.map.with_index do |e, i|
+        csv << e.values_at(0, 1, 2, 3, -1)
+      end
+    end
   end
 end
 
 
-worker=CBUpdater.new
-t=[]
+worker=CBUpdater.pool(size: 10)
 puts Benchmark.measure {
   11.times do | i |
-      worker.populate_df(i)
+      worker.async.populate_df(i)
   end
   worker.save_data_file
-  t.map(&:join)
 }
-
