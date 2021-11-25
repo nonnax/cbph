@@ -82,7 +82,7 @@ class CBUpdater
   def save_data_file
     CSV.open('data.csv', 'w') do |csv|
       @df.dup.map.with_index do |e, _i|
-        csv << e.values_at(0, 1, 2, 3, -2, -1)
+        csv << e #.values_at(0, 1, 2, 3, 6, -2, -1)
       end
     end
   end
