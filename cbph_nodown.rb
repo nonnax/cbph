@@ -4,12 +4,9 @@
 # Id$ nonnax 2021-11-03 00:19:48 +0800
 require 'excon'
 require 'json'
-require 'down'
 require 'fileutils'
-require 'rubytools/array_table'
 require 'rubytools/hash_ext'
 require 'rubytools/thread_ext'
-require 'rubytools/fzf'
 require 'forwardable'
 require 'csv'
 require 'benchmark'
@@ -18,20 +15,12 @@ class CBUpdater
   extend Forwardable
   def_delegators :@df, :map, :each
   attr :picklist_ph, :picklist_beauty
-  attr_accessor :df, :th, :counter
+  attr_accessor :df, :counter
 
   def initialize
     @df = []
-    @th = []
     @counter=0
-    @data_file = 'data.txt'
     @datastore = 'data.csv'
-    File.write(@data_file, '')
-    pickfile = 'picklist_ph'
-    pickfile_beauty = 'picklist_beauty'
-    default_list = %w[murbears_world marymoody cielo69_ candy_temptation_]
-    @picklist_ph = File.exist?(pickfile) ? File.read(pickfile).split("\n").uniq.map(&:strip) : default_list
-    @picklist_beauty = File.exist?(pickfile_beauty) ? File.read(pickfile_beauty).split("\n").uniq.map(&:strip) : default_list
     reset_datastore()
   end
 
@@ -63,12 +52,12 @@ class CBUpdater
 
     return [] if data['results'].empty?
     p [i, data['results'].size]
-
-    keys = %w[image_url username location age current_show is_hd is_new num_followers chat_room_url_revshare]
+    # region 	asia | europe_russia | northamerica | southamerica | other
+    keys = %w[image_url username location age current_show is_hd is_new num_users num_followers chat_room_url_revshare]
     data
       .to_h['results']
       .map do |r|
-        row << r.values_at(*keys) if r['age'] && r['age'] < 28
+        row << r.values_at(*keys) if r['age'] && r['age'] < 30
       end
 
     @df += row.uniq
@@ -78,24 +67,28 @@ class CBUpdater
 
   def save_data_file(r)
     CSV.open(@datastore, 'a') do |csv|
-      r.dup.each{ |e|
+      csv.flock(File::LOCK_EX) # Exclusive lock needed for writing
+      r.dup.each do |e|
         i=update_counter
         csv << ([i]+e)
-      }
+      end
+      csv.flush
     end
   end
 end
 
 t = []
 worker = CBUpdater.new
-puts Benchmark.measure {
-  11.times{ |i|
+info=Benchmark.measure do
+  12.times do |i|
     t<<Thread.new do 
-      worker.populate_df(i){ |r| worker.save_data_file(r)}
+      worker.populate_df(i){ |r| worker.save_data_file(r) }
     end
-  }  
+  end
   t.map(&:join)
-}
+end
+
+puts info
 
 # https://chaturbate.com/api/public/affiliates/onlinerooms/?wm=LVTEy&client_ip=request_ip
 # Supported parameters

@@ -5,10 +5,9 @@
 require 'rubytools/cubadoo'
 require 'csv'
 require 'cgi'
-
-keys=%i[rec_id image_url username location age current_show is_hd is_new num_followers chat_room_url_revshare]
-REC_ID, IMAGE_URL, USERNAME, LOCATION, AGE, CURRENT_SHOW, IS_HD, IS_NEW, NUM_FOLLOWERS, CHAT_ROOM_URL_REVSHARE = *(0..keys.size)
-
+keys=%i[rec_id image_url username location age current_show is_hd is_new num_users num_followers chat_room_url_revshare]
+REC_ID, IMAGE_URL, USERNAME, LOCATION, AGE, CURRENT_SHOW, IS_HD, IS_NEW, NUM_USERS, NUM_FOLLOWERS, CHAT_ROOM_URL_REVSHARE = *(0..keys.size)
+OFFSET=100
 Cuba.class_eval do
   def _layout(&block)
     html_ do
@@ -29,8 +28,10 @@ Cuba.class_eval do
               input_(type: 'submit', value: 'q')
             end
             div_(class: 'new') do
-             a_(href: '/newbies/1/0'){ 'newbies' }
-             a_(href: '/hd/1/0'){ 'HD' } 
+              ul_ do
+                li_{a_(href: '/newbies/1/0'){ 'newbies' }}
+                li_{a_(href: '/hd/1/0'){ 'HD' }}
+              end
             end
           end
         end
@@ -47,57 +48,65 @@ Cuba.class_eval do
     end
   end
 
-  def page_info(page, pages, _offset = 200)
+  def page_info(page, pages)
     div_ do
       "(#{page + 1} of #{pages})"
     end
   end
 
-  def montage(vrooms, page)
+  def montage(vrooms, page, offset = OFFSET)
     rooms = vrooms.uniq.sort_by { |r| r[NUM_FOLLOWERS].to_i }.reverse
-    offset = 200
-
     div_ do
+      t=[]
       rooms[page * offset..(page * offset + offset - 1)].map do |u|
-        rec_id, image_url, username, location, age, current_show, is_hd, is_new, num_followers, chat_room_url_revshare = u
-        div_(class: 'grid') do
-          div_(class: 'center') do
-            a_(href: "/room/#{rec_id}", target: '_blank') do
-              img_(src: image_url)
+        t<<Thread.new do
+          rec_id, image_url, username, location, age, current_show, is_hd, is_new, num_users, num_followers, chat_room_url_revshare = u
+            div_(class: 'grid') do
+              div_(class: 'center') do
+                a_(href: "/room/#{rec_id}", target: '_blank') do
+                  img_(src: image_url)
+                end
+              end
+              div_(class: 'user') do
+                p_ { username }
+                p_ { location }
+                p_ { num_followers }
+                p_ { is_new }
+              end
             end
-          end
-          div_(class: 'user') do
-            p_ { username }
-            p_ { location }
-            p_ { num_followers }
-            p_ { is_new }
-          end
         end
+        t.map(&:join)
       end
     end
   end
 
-  def render_rooms(vrooms, pg = 1, q = nil)
+  def render_rooms(vrooms, pg = 1, q = '', offset = OFFSET)
     rooms = vrooms
-    page = pg.to_i - 1
-    offset = 200
+    page = pg.to_i - 1    
     pages = (rooms.size / offset.to_f).floor
     links = location_links(rooms)
     montage_view = montage(rooms, page)
     req_base, req_page, req_q =env[Rack::REQUEST_PATH].scan(/\w+/)
+    pagination=tagz do 
+        pages.times do |i|
+        page==i ? span_(class: 'current_page'){ "[#{i+1}]" } : a_(class: 'page', href: "/#{req_base}/#{i + 1}/#{q}") { b_ { (i + 1) } }
+        end 
+    end
     render(layout: true) do
       div_ do
         div_(class: 'pages') do
           if pages.zero?
             span_(class: 'page'){'1'}
           else
-            pages.times do |i|
-              a_(class: 'page', href: "/#{req_base}/#{i + 1}/#{q}") { b_ { (i + 1) } }
-            end 
+            pagination
+            # pages.times do |i|
+              # page==i ? span_(class: 'current_page'){ "[#{i+1}]" } : a_(class: 'page', href: "/#{req_base}/#{i + 1}/#{q}") { b_ { (i + 1) } }
+            # end
           end
         end 
         p_ { montage_view }
         div_(class: 'clearfix') { hr_ }
+        div_(class: 'pages') { pagination }
         p_ { links }
       end
     end
@@ -124,15 +133,14 @@ Cuba.define do
 
     on 'rooms/:page' do |pg|
       page = pg.to_i - 1
-      offset = 200
+      offset = OFFSET
       pages = (rooms.size / offset.to_f).floor
       montage_view = montage(rooms, page)
       render(layout: true) do
         div_ do
           div_(class: 'pages') do
             pages.times do |i|
-              a_(class: 'page', href: "/rooms/#{i + 1}") { b_{ i + 1 } }
-              span_ { ' ' }
+              page==i ? span_(class: 'current_page'){ "[#{i+1}]" } : a_(class: 'page', href: "/rooms/#{i + 1}") { b_{ i + 1 } }
             end
           end
           p_ { montage_view }
@@ -161,7 +169,9 @@ Cuba.define do
 
     on 'hd/:page/:new' do |page, new|
       rooms = datastore()
-      rooms = rooms.select { |r| r[IS_HD]=='true' }
+      rooms = rooms.select { |r| 
+        r[IS_HD]=='true' 
+      }
       render_rooms(rooms, page, new)
     end
 
