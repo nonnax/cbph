@@ -3,8 +3,29 @@ body{
   height: 100%;
   background: black;
   color: white;
-  /* background-image: url("/media/background.png"); */
-  background-image: url("/media/bg_net.jpg") ;
+  background-image: url("/media/background.png"); 
+  /* background-image: url("/media/bg_net.jpg") ; */
+  /* background-image: url("/media/bg_fph.jpg") ; */
+}
+#home{
+  /* float: left; */
+  /* display: block; */
+  /* position: relative; */
+  height: 100%; 
+}
+#home>li{
+  list-style: none;
+  /* float: left; */
+  margin-left: 30px; 
+  padding: 0;
+  height: 20px;
+}
+#home>li>img{
+  position: absolute;
+  top: 30px;
+  left: 10px;
+  height: 60px;
+  width: 60px;
 }
 a{
   text-decoration: none;
@@ -23,7 +44,7 @@ img{
 .grid 
 {
   float :left;
-  width: 15%;
+  width: 16%;
   padding: 1px;
   margin: 2px; 
   border: 1px solid magenta;
@@ -67,6 +88,13 @@ div.grid:hover{
   clear: both;
   display: table;
 }
+hr{
+  position: absolute;
+  width: 90%;
+  padding: 0;
+  margin: 0;
+  display: none;
+}
 p > form{
   position: relative;
   display: block;
@@ -100,13 +128,15 @@ p > form{
 }
 .current_page, .page{
   text-align: center;
-  margin: 5px;
-  font-size: 25px;
+  margin-left: 10px; 
+  /* margin-right: 12px; */
+  /* padding:0; */
+  font-size: 16px;
 }
 .pages{
-  text-align: center;
-  margin: 5px;
-  width: 100%;
+  z-index: 3;
+  text-align: right;  
+  width: 92%;
 }
 .new{ 
   position: relative;

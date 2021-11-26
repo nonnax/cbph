@@ -18,9 +18,10 @@ Cuba.class_eval do
       end
       body_ do        
         div_( id: 'banner') do
-          div_( id: 'home' ){
-            a_( href: '/'){h1_ { '..:: MetaCamVerse ::..' } }
-            span_{'..:: veni vidi vici  ::..'}
+          ul_( id: 'home' ){
+            li_ {img_ id: 'logo', src: '/media/ca_eye.png'}
+            li_ {a_( href: '/'){h3_ { ': Camoholics+Anonymous :::...' } }}
+            li_ {span_{%(: Hi I'm X, and I'm a cam-o-holic :::...)}}
           }          
           div_( id: 'search' ) do
             form_(action: '/search', method: 'get') do
@@ -93,7 +94,7 @@ Cuba.class_eval do
     req_base, req_page, req_q =env[Rack::REQUEST_PATH].scan(/\w+/)
     pagination=tagz do 
         pages.times do |i|
-        page==i ? span_(class: 'current_page'){ "[#{i+1}]" } : a_(class: 'page', href: "/#{req_base}/#{i + 1}/#{q}") { b_ { (i + 1) } }
+          page==i ? span_(class: 'current_page'){ "[#{i+1}]" } : a_(class: 'page', href: "/#{req_base}/#{i + 1}/#{q}") { b_ { (i + 1) } }
         end 
     end
     render(layout: true) do
@@ -103,14 +104,10 @@ Cuba.class_eval do
             span_(class: 'page'){'1'}
           else
             pagination
-            # pages.times do |i|
-              # page==i ? span_(class: 'current_page'){ "[#{i+1}]" } : a_(class: 'page', href: "/#{req_base}/#{i + 1}/#{q}") { b_ { (i + 1) } }
-            # end
           end
         end 
         p_ { montage_view }
         div_(class: 'clearfix') { hr_ }
-        div_(class: 'pages') { pagination }
         p_ { links }
       end
     end
@@ -143,11 +140,16 @@ Cuba.define do
       render(layout: true) do
         div_ do
           div_(class: 'pages') do
-            pages.times do |i|
-              page==i ? span_(class: 'current_page'){ "[#{i+1}]" } : a_(class: 'page', href: "/rooms/#{i + 1}") { b_{ i + 1 } }
+            if pages.zero?
+              span_(class: 'page'){'1'}
+            else
+              pages.times do |i|
+                page==i ? span_(class: 'current_page'){ "[#{i+1}]" } : a_(class: 'page', href: "/rooms/#{i + 1}") { b_{ i + 1 } }
+              end
             end
           end
           p_ { montage_view }
+          div_(class: 'clearfix') { hr_ }
         end
       end
     end
