@@ -6,8 +6,8 @@ require 'rubytools/cubadoo'
 require 'csv'
 require 'cgi'
 
-keys=%i[image_url username location age current_show is_hd is_new num_followers chat_room_url_revshare]
-IMAGE_URL, USERNAME, LOCATION, AGE, CURRENT_SHOW, IS_HD, IS_NEW, NUM_FOLLOWERS, CHAT_ROOM_URL_REVSHARE = *(0..keys.size)
+keys=%i[rec_id image_url username location age current_show is_hd is_new num_followers chat_room_url_revshare]
+REC_ID, IMAGE_URL, USERNAME, LOCATION, AGE, CURRENT_SHOW, IS_HD, IS_NEW, NUM_FOLLOWERS, CHAT_ROOM_URL_REVSHARE = *(0..keys.size)
 
 Cuba.class_eval do
   def _layout(&block)
@@ -28,7 +28,10 @@ Cuba.class_eval do
               input_(type: 'text', name: 'q' )
               input_(type: 'submit', value: 'q')
             end
-            div_(class: 'new'){ a_(href: '/newbies/1/0'){ 'newbies' } }
+            div_(class: 'new') do
+             a_(href: '/newbies/1/0'){ 'newbies' }
+             a_(href: '/hd/1/0'){ 'HD' } 
+            end
           end
         end
         div_(id: 'content', &block)
@@ -38,7 +41,7 @@ Cuba.class_eval do
 
   def location_links(rooms)
     div_(class: 'location') do
-      rooms.map { |r| r[2] }.uniq.map do |loc|
+      rooms.map { |r| r[LOCATION] }.uniq.map do |loc|
         a_(class: 'page', href: "/search/1/#{loc}") { loc }
       end
     end
@@ -51,16 +54,16 @@ Cuba.class_eval do
   end
 
   def montage(vrooms, page)
-    rooms = vrooms.uniq.sort_by { |r| r[-2].to_i }.reverse
+    rooms = vrooms.uniq.sort_by { |r| r[NUM_FOLLOWERS].to_i }.reverse
     offset = 200
 
     div_ do
       rooms[page * offset..(page * offset + offset - 1)].map do |u|
-        image_url, username, location, age, current_show, is_hd, is_new, num_followers, chat_room_url_revshare = u
+        rec_id, image_url, username, location, age, current_show, is_hd, is_new, num_followers, chat_room_url_revshare = u
         div_(class: 'grid') do
           div_(class: 'center') do
-            a_(href: chat_room_url_revshare, target: '_blank') do
-              img_(src: "/media/#{username}.jpg")
+            a_(href: "/room/#{rec_id}", target: '_blank') do
+              img_(src: image_url)
             end
           end
           div_(class: 'user') do
@@ -93,18 +96,21 @@ Cuba.class_eval do
             end 
           end
         end 
-        
-        p_ { links }
         p_ { montage_view }
         div_(class: 'clearfix') { hr_ }
         p_ { links }
       end
     end
   end
+
+  def datastore
+    CSV.read('./data.csv')
+  end
+  
 end
 
 Cuba.define do
-  rooms = CSV.read('./data.csv')
+  rooms = datastore()
 
   on get do
     # /media/style.css
@@ -136,14 +142,26 @@ Cuba.define do
 
     on 'search/:page/:loc' do |page, loc|
       loc_decoded=Rack::Utils.unescape(loc)
-      rooms = CSV.read('./data.csv')
-      rooms = rooms.select { |r| (/#{loc_decoded}/i).match(r[2]) }
+      rooms = datastore()
+      rooms = rooms.select { |r| (/#{loc_decoded}/i).match(r[LOCATION]) }
       render_rooms(rooms, page, loc)
     end
 
+    on 'room/:id' do |id|
+      rooms = datastore()
+      room = rooms.detect{ |r| r.first==id }
+      res.redirect room[CHAT_ROOM_URL_REVSHARE]
+    end
+
     on 'newbies/:page/:new' do |page, new|
-      rooms = CSV.read('./data.csv')
+      rooms = datastore()
       rooms = rooms.select { |r| r[IS_NEW]=='true' }
+      render_rooms(rooms, page, new)
+    end
+
+    on 'hd/:page/:new' do |page, new|
+      rooms = datastore()
+      rooms = rooms.select { |r| r[IS_HD]=='true' }
       render_rooms(rooms, page, new)
     end
 
