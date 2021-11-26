@@ -7,7 +7,7 @@ require 'csv'
 require 'cgi'
 keys=%i[rec_id image_url username location age current_show is_hd is_new num_users num_followers chat_room_url_revshare]
 REC_ID, IMAGE_URL, USERNAME, LOCATION, AGE, CURRENT_SHOW, IS_HD, IS_NEW, NUM_USERS, NUM_FOLLOWERS, CHAT_ROOM_URL_REVSHARE = *(0..keys.size)
-OFFSET=100
+OFFSET=102
 Cuba.class_eval do
   def _layout(&block)
     html_ do
@@ -68,10 +68,14 @@ Cuba.class_eval do
                 end
               end
               div_(class: 'user') do
-                p_ { username }
-                p_ { location }
-                p_ { num_followers }
-                p_ { is_new }
+                ul_(class: 'basic') do
+                  li_ { username }
+                  li_ { location }
+                end
+                ul_(class: 'extra') do
+                  li_ { is_new=='true' ? 'N' : 'O'}
+                  li_ { num_followers }
+                end
               end
             end
         end
