@@ -64,7 +64,8 @@ class CBUpdater
     data
       .to_h['results']
       .map do |r|
-        row << r.values_at(*keys) if r['age'] && r['age'] < 30
+        # row << r.values_at(*keys) if r['age'] && r['age'] < 140
+        row << r.values_at(*keys)
       end
 
     @df += row.uniq

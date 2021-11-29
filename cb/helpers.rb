@@ -15,6 +15,18 @@ TITLE = '𝕔𝕒𝕞+𝕠+𝕙𝕠𝕝𝕚𝕔𝕤+𝕒𝕟𝕠𝕟𝕪𝕞𝕠
 
 Cuba.class_eval do
   def _layout(&block)
+    groups={
+      newbies: '/newbies/1/0',
+      hd: '/hd/1/0',
+      teen:'/group/1/teen',
+      '20s' => '/group/1/20s',
+      '25up' => '/group/1/25up',
+      '30up' => '/group/1/30up',
+      others:  '/group/1/others',
+      pick: '/pickph/1/0'
+    }
+    root_path, page, q = req.path
+
     html_ do
       head_ do
         meta_('http-equiv': 'refresh', content: '120')
@@ -31,11 +43,10 @@ Cuba.class_eval do
           div_( id: 'search' ) do
             div_(class: 'new') do
               ul_ do
-                li_{a_(href: '/newbies/1/0'){ 'newbies' }}
-                li_{a_(href: '/hd/1/0'){ 'HD' }}
-                li_{a_(href: '/group/1/teen'){ 'teen' }}
-                li_{a_(href: '/group/1/20s'){ '20s' }}
-                li_{a_(href: '/group/1/milf'){ '25+' }}
+                groups.each do |k, v|
+                  class_name = root_path.match(k.to_s) ? 'current_page' : 'page'
+                  li_{a_(class: class_name, href: v){ k }} 
+               end
               end
             end
             div_(class: 'form') do
@@ -84,6 +95,8 @@ Cuba.class_eval do
                 ul_(class: 'extra') do
                   li_ { is_new=='true' ? NEW : OLD}
                   li_ { num_followers }
+                  li_ { a_( href: "/pick/#{username}"){'+'} }
+                  
                 end
               end
             end
@@ -131,5 +144,17 @@ Cuba.class_eval do
   def datastore
     CSV.read('./data.csv')
   end
+  def pick_toggle(username)
+    Thread.new do
+      plist=data_picklist
+      plist.include?(username) ? plist.delete(username) : plist.push(username) 
+      File.write('picklist', plist.join("\n"))
+      sleep 1
+    end.join
+  end
   
+  def data_picklist
+    File.read("picklist").split("\n")
+  end
+    
 end
