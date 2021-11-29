@@ -1,4 +1,4 @@
-#!/usr/bin/env -S ruby --jit
+#!/usr/bin/env ruby
 # frozen_string_literal: true
 
 # Id$ nonnax 2021-11-03 00:19:48 +0800
@@ -7,9 +7,13 @@ require 'json'
 require 'fileutils'
 require 'rubytools/hash_ext'
 require 'rubytools/thread_ext'
+require 'rubytools/xxhsum'
 require 'forwardable'
 require 'csv'
 require 'benchmark'
+require 'monitor'
+
+USERNAME=1
 
 class CBUpdater
   extend Forwardable
@@ -20,10 +24,13 @@ class CBUpdater
   def initialize(region: [])
     @df = []
     @url = ''
-    @region_filter = region #.inject([]){|a, e| a<<"region=#{e}" }.join("&")
+    @region_filter = region
     @counter=0
     @datastore = 'data.csv'
+    @userstore = 'user.csv'
+    @userhash={}
     reset_datastore()
+    load_userstore()
   end
 
   def reset_datastore
@@ -31,6 +38,22 @@ class CBUpdater
     File.write(@datastore, '')
   end
 
+  def load_userstore
+    Thread.new do
+      CSV.foreach(@userstore) do |r|
+        user, hash = r
+        @userhash[user]=hash
+      end
+    end.join
+  end
+  def save_userstore()
+      CSV.open(@userstore, 'w') do |csv|
+        @userhash.each do |k, v|  
+          csv<<[k,v]
+        end
+      end
+  end
+  
   def get(offset, display_count = 500)
     params = {
       wm: 'LVTEy',
@@ -54,34 +77,42 @@ class CBUpdater
   end
 
   def populate_df(i)
-    row = []
-    data = get(i * 500)
+    Monitor.new.synchronize do
+      row = []
+      data = get(i * 500)
 
-    return [] if data['results'].empty?
-    p [i, data['results'].size]
-    # region 	asia | europe_russia | northamerica | southamerica | other
-    keys = %w[image_url username location age current_show is_hd is_new num_users num_followers chat_room_url_revshare]
-    data
-      .to_h['results']
-      .map do |r|
-        # row << r.values_at(*keys) if r['age'] && r['age'] < 140
-        row << r.values_at(*keys)
-      end
+      return [] if data['results'].empty?
+      print [i, data['results'].size]
+      # region 	asia | europe_russia | northamerica | southamerica | other
+      keys = %w[image_url username location age current_show is_hd is_new num_users num_followers chat_room_url_revshare]
+      data
+        .to_h['results']
+        .map do |r|
+          # row << r.values_at(*keys) if r['age'] && r['age'] < 140
+          row << r.values_at(*keys)
+        end
 
-    @df += row.uniq
-    yield row.uniq
-    sleep 1
+      @df += row.uniq
+      yield row.uniq
+      sleep 1
+    end
   end
 
   def save_data_file(r)
-    CSV.open(@datastore, 'a') do |csv|
-      csv.flock(File::LOCK_EX) # Exclusive lock needed for writing
-      r.dup.each do |e|
-        i=update_counter
-        csv << ([i]+e)
+      Monitor.new.synchronize do
+        CSV.open(@datastore, 'a') do |csv|
+          csv.flock(File::LOCK_EX) # Exclusive lock needed for writing
+          r.dup.each do |e|
+            i=update_counter
+            unless @userhash[e[USERNAME]] 
+              @userhash[e[USERNAME]] = e[USERNAME].xxhsum
+            end
+            userhash=@userhash[e[USERNAME]]
+            csv << ([userhash]+e)
+          end
+          csv.flush
+        end
       end
-      csv.flush
-    end
   end
 end
 
@@ -91,12 +122,15 @@ t = []
 worker = CBUpdater.new(region: region_filter)
 
 info=Benchmark.measure do
-  20.times do |i|
-    t<<Thread.new do 
-      worker.populate_df(i){ |r| worker.save_data_file(r) }
-    end
+  20.times do |i|    
+      t<<Thread.new(i) do |i|
+        worker.populate_df(i){ |r| worker.save_data_file(r) }
+      end
   end
   t.map(&:join)
+  Thread.new do
+    worker.save_userstore()
+  end.join
 end
 
 puts info

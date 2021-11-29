@@ -142,8 +142,16 @@ Cuba.class_eval do
   end
 
   def datastore
-    CSV.read('./data.csv')
+    dbfile='./data.csv'
+    # Thread.new{
+      # if (Time.now-File.open(dbfile).mtime)>60*5
+        # IO.popen('./updatedb.rb', &:read)
+        # sleep 3
+      # end
+    # }.join
+    CSV.read(dbfile)
   end
+
   def pick_toggle(username)
     Thread.new do
       plist=data_picklist
