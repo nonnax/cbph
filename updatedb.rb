@@ -68,9 +68,8 @@ class CBUpdater
     end
     
     #"region 	asia | europe_russia | northamerica | southamerica | other region=asia&region=northamerica"
-    self.url = "https://chaturbate.com/api/public/affiliates/onlinerooms/?#{params.to_query_string(repeat_keys: true)}"
-    response = Excon.get(url)
-    JSON.parse(response.body)
+    self.url = ['https://chaturbate.com/api/public/affiliates/onlinerooms/', params.to_query_string(repeat_keys: true)].join('?')
+    JSON.parse(Excon.get(url).body)
   end
   def update_counter
     @counter+=1
@@ -91,9 +90,7 @@ class CBUpdater
           # row << r.values_at(*keys) if r['age'] && r['age'] < 140
           row << r.values_at(*keys)
         end
-
-      @df += row.uniq
-      yield row.uniq
+      yield row.uniq.tap{|u| @df += u } #yield only new rows
       sleep 1
     end
   end
