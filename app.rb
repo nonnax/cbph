@@ -33,7 +33,7 @@ Cuba.define do
 
     on 'search/:page/:loc' do |page, loc|
       loc.gsub!(/\W/,' ')
-      loc_decoded=Rack::Utils.unescape(loc)
+      loc_decoded=un(loc)
       rooms = datastore()
       rooms = rooms.select { |r| (/#{loc_decoded}/i).match(r[LOCATION]) || (/#{loc_decoded}/i).match(r[USERNAME]) }
       render_rooms(rooms, page, loc)

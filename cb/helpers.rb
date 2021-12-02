@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 # Id$ nonnax 2021-11-29 13:16:03 +0800
 require 'rubytools/cubadoo'
+require 'rubytools/array_ext'
 
 keys=%i[rec_id image_url username location age current_show is_hd is_new num_users num_followers chat_room_url_revshare]
 REC_ID, IMAGE_URL, USERNAME, LOCATION, AGE, CURRENT_SHOW, IS_HD, IS_NEW, NUM_USERS, NUM_FOLLOWERS, CHAT_ROOM_URL_REVSHARE = *(0..keys.size)
@@ -79,7 +80,8 @@ Cuba.class_eval do
   def montage(vrooms, page, offset = OFFSET)
     rooms = vrooms.uniq.sort_by { |r| r[NUM_FOLLOWERS].to_i }.reverse
     div_ do
-      rooms[page * offset..(page * offset + offset - 1)].map do |u|
+      page_start = (page * offset)
+      rooms[(page_start)..(page_start + offset - 1)].map do |u|
           rec_id, image_url, username, location, age, current_show, is_hd, is_new, num_users, num_followers, chat_room_url_revshare = u
             div_(class: 'grid') do
               div_(class: 'center') do
@@ -111,7 +113,7 @@ Cuba.class_eval do
             if pages.zero?
               span_(class: 'page'){'1'}
             else
-              pages.times do |i|
+              (0..pages).to_a.window(at: page, take: 10).each do |i|
                 pg=i+1
                 href_path = q ? "/#{path_root}/#{pg}/#{q}" : "/#{path_root}/#{pg}"
                 page==i ? span_(class: 'current_page'){ pg } : a_(class: 'page', href: href_path) { b_{ pg } }
@@ -120,6 +122,7 @@ Cuba.class_eval do
           end
       end  
   end
+  
   def render_rooms(vrooms, pg = 1, q = '', offset = OFFSET)
     rooms = vrooms
     page = pg.to_i - 1    

@@ -1,3 +1,3 @@
 usage:
-  update_loop.rb to initialize media static files
+  run.sh update data.csv as background job (5 min)
   rackup
