@@ -31,6 +31,7 @@ class CBUpdater
     # @userstore = 'user.csv'
     @userstore = 'users.db'
     @userhash={}
+    @datahash={}
     reset_datastore()
     load_userstore()
   end
@@ -49,9 +50,17 @@ class CBUpdater
   end
 
   def save_userstore()
-      GDBM.open(@userstore) do |gdbm|
-         gdbm.update(@userhash.invert)
-      end
+    GDBM.open(@userstore) do |gdbm|
+       gdbm.update(@userhash.invert)
+    end
+  end
+
+  def save_datastore()
+    CSV.open(@datastore, 'w') do |csv|
+       @datahash.each do |k, u|
+        csv<<[k]+u
+       end
+    end
   end
   
   def get(offset, display_count = 500)
@@ -97,20 +106,15 @@ class CBUpdater
     end
   end
 
-  def save_data_file(r)
-      Monitor.new.synchronize do
-        CSV.open(@datastore, 'a') do |csv|
-          csv.flock(File::LOCK_EX) # Exclusive lock needed for writing
-          r.dup.each do |e|
-            user_hash=@userhash[e[USERNAME]] 
-            unless user_hash              
-              user_hash = (@userhash[e[USERNAME]] = e[USERNAME].xxhsum)
-            end
-            csv << ([user_hash]+e)
-          end
-          csv.flush
+  def populate_datahash(rows)
+    Monitor.new.synchronize do
+      rows.dup.each do |r|
+        unless user_hash = @userhash[r[USERNAME]] 
+          user_hash = (@userhash[r[USERNAME]] = r[USERNAME].xxhsum)
         end
+        @datahash[user_hash]=r
       end
+    end
   end
 end
 
@@ -122,13 +126,17 @@ worker = CBUpdater.new(region: region_filter)
 info=Benchmark.measure do
   15.times do |i|    
       t<<Thread.new(i) do |i|
-        worker.populate_df(i){ |r| worker.save_data_file(r) }
+        worker.populate_df(i){ |r| worker.populate_datahash(r) }
       end
   end
-  t.map(&:join)
-  Thread.new do
+  t<<Thread.new do
     worker.save_userstore()
-  end.join
+  end
+  t<<Thread.new do
+    worker.save_datastore()
+  end
+  t.map(&:join)
+
 end
 
 puts info

@@ -5,7 +5,7 @@ require 'rubytools/array_ext'
 
 keys=%i[rec_id image_url username location age current_show is_hd is_new num_users num_followers chat_room_url_revshare]
 REC_ID, IMAGE_URL, USERNAME, LOCATION, AGE, CURRENT_SHOW, IS_HD, IS_NEW, NUM_USERS, NUM_FOLLOWERS, CHAT_ROOM_URL_REVSHARE = *(0..keys.size)
-OFFSET=102
+OFFSET=54
 NEW = '⭐️'
 OLD = '❤️'
 # TITLE = '░c░a░m░o░h░o░l░i░c░s░+░a░n░o░n░y░m░o░u░s░'
@@ -113,10 +113,9 @@ Cuba.class_eval do
             if pages.zero?
               span_(class: 'page'){'1'}
             else
-              (0..pages).to_a.window(at: page, take: 10).each do |i|
-                pg=i+1
+              (1..pages).to_a.window(at: page, take: 10).each do |pg|
                 href_path = q ? "/#{path_root}/#{pg}/#{q}" : "/#{path_root}/#{pg}"
-                page==i ? span_(class: 'current_page'){ pg } : a_(class: 'page', href: href_path) { b_{ pg } }
+                page==pg-1 ? span_(class: 'current_page'){ pg } : a_(class: 'page', href: href_path) { b_{ pg } }
               end
             end
           end
@@ -146,12 +145,6 @@ Cuba.class_eval do
 
   def datastore
     dbfile='./data.csv'
-    # Thread.new{
-      # if (Time.now-File.open(dbfile).mtime)>60*5
-        # IO.popen('./updatedb.rb', &:read)
-        # sleep 3
-      # end
-    # }.join
     CSV.read(dbfile)
   end
 
