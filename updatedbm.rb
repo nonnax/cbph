@@ -129,13 +129,11 @@ info=Benchmark.measure do
         worker.populate_df(i){ |r| worker.populate_datahash(r) }
       end
   end
-  t<<Thread.new do
-    worker.save_userstore()
-  end
-  t<<Thread.new do
-    worker.save_datastore()
-  end
   t.map(&:join)
+  Thread.new do
+    worker.save_userstore()
+    worker.save_datastore()
+  end.join
 
 end
 
