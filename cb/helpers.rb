@@ -1,7 +1,8 @@
 #!/usr/bin/env ruby
 # Id$ nonnax 2021-11-29 13:16:03 +0800
-require 'rubytools/cubadoo'
-require 'rubytools/array_ext'
+require 'rubytools'
+require 'cubadoo'
+require 'array_ext'
 
 keys=%i[rec_id image_url username location age current_show is_hd is_new num_users num_followers chat_room_url_revshare]
 REC_ID, IMAGE_URL, USERNAME, LOCATION, AGE, CURRENT_SHOW, IS_HD, IS_NEW, NUM_USERS, NUM_FOLLOWERS, CHAT_ROOM_URL_REVSHARE = *(0..keys.size)
@@ -125,7 +126,7 @@ Cuba.class_eval do
   def render_rooms(vrooms, pg = 1, q = '', offset = OFFSET)
     rooms = vrooms
     page = pg.to_i - 1    
-    pages = (rooms.size / offset.to_f).floor
+    pages = (rooms.size / offset.to_f).ceil
     _links = location_links(rooms)
     _montage_view = montage(rooms, page)
     req_base, req_page, req_q = req.path.scan(/\w+/)
