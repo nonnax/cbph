@@ -52,8 +52,8 @@ Cuba.define do
 
     on 'pickph/:page/:new' do |page, new|
       rooms = datastore()
-      picklist=data_picklist()
-      rooms = rooms.select { |r| picklist.include?(r[USERNAME]) }
+      picks=picklist()
+      rooms = rooms.select { |r| picks.include?(r[USERNAME]) }
       render_rooms(rooms, page, new)
     end
 
