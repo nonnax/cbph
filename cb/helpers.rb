@@ -9,6 +9,8 @@ REC_ID, IMAGE_URL, USERNAME, LOCATION, AGE, CURRENT_SHOW, IS_HD, IS_NEW, NUM_USE
 OFFSET=54
 NEW = '⭐️'
 OLD = '❤️'
+ADD = '✔️'
+REMOVE = '✖️'
 # TITLE = '░c░a░m░o░h░o░l░i░c░s░+░a░n░o░n░y░m░o░u░s░'
 # TITLE = '░░camoholics░░anonymous░░'
 # TITLE = '𝕔𝕒𝕞𝕠𝕙𝕠𝕝𝕚𝕔𝕤+𝕒𝕟𝕠𝕟𝕪𝕞𝕠𝕦𝕤'
@@ -41,6 +43,7 @@ Cuba.class_eval do
             li_ {a_( href: '/'){img_ id: 'logo', src: '/media/ca_eye.png'}}
             li_ {a_( href: '/'){h3_ { TITLE } }}
             li_ {span_{%(: Hi I'm X, and I'm a cam-o-holic :::...)}}
+            # li_{ button_( type: 'button', onclick: "alert('Hello World')"){'click me'}}
           }          
           div_( id: 'search' ) do
             div_(class: 'new') do
@@ -98,7 +101,13 @@ Cuba.class_eval do
                 ul_(class: 'extra') do
                   li_ { is_new=='true' ? NEW : OLD}
                   li_ { num_followers }
-                  li_ { a_( href: "/pick/#{username}"){'+'} }
+                  li_ { 
+                        if picklist.detect{|u| u.strip.match(username) }
+                          a_( href: "/pick/#{username}"){REMOVE}
+                        else
+                          a_( href: "/pick/#{username}"){ADD}
+                        end
+                      }
                   
                 end
               end
@@ -145,21 +154,20 @@ Cuba.class_eval do
   end
 
   def datastore
-    dbfile='./data.csv'
-    CSV.read(dbfile)
+    CSV.read('./data.csv')
+  end
+
+  def picklist
+    File.read('./picklist').split("\n")
   end
 
   def pick_toggle(username)
     Thread.new do
-      plist=data_picklist
+      plist=picklist
       plist.include?(username) ? plist.delete(username) : plist.push(username) 
       File.write('picklist', plist.join("\n"))
       sleep 1
     end.join
   end
-  
-  def data_picklist
-    File.read("picklist").split("\n")
-  end
-    
+     
 end

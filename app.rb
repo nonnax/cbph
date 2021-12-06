@@ -32,7 +32,6 @@ Cuba.define do
     end
 
     on 'search/:page/:loc' do |page, loc|
-      loc.gsub!(/\W/,' ')
       loc_decoded=un(loc)
       rooms = datastore()
       rooms = rooms.select { |r| (/#{loc_decoded}/i).match(r[LOCATION]) || (/#{loc_decoded}/i).match(r[USERNAME]) }
@@ -60,9 +59,7 @@ Cuba.define do
 
     on 'hd/:page/:new' do |page, new|
       rooms = datastore()
-      rooms = rooms.select { |r| 
-        r[IS_HD]=='true' 
-      }
+      rooms = rooms.select { |r| r[IS_HD]=='true' }
       render_rooms(rooms, page, new)
     end
 
