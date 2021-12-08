@@ -22,7 +22,9 @@ Cuba.class_eval do
     groups={
       newbies: '/newbies/1/0',
       hd: '/hd/1/0',
-      teen:'/group/1/teen',
+      'ua' => '/group/1/ua',
+      '18' => '/group/1/18',
+      '19' => '/group/1/19',
       '20s' => '/group/1/20s',
       '25up' => '/group/1/25up',
       '30up' => '/group/1/30up',

@@ -32,9 +32,9 @@ Cuba.define do
     end
 
     on 'search/:page/:loc' do |page, loc|
-      loc_decoded=un(loc)
+      loc_decoded=un(loc).gsub(/\W+/, '|')
       rooms = datastore()
-      rooms = rooms.select { |r| (/#{loc_decoded}/i).match(r[LOCATION]) || (/#{loc_decoded}/i).match(r[USERNAME]) }
+      rooms = rooms.select { |r| (/#{r[LOCATION].gsub(/\W+/, '|')}|#{r[USERNAME]}/i).match(loc_decoded) } unless loc_decoded.strip.empty?
       render_rooms(rooms, page, loc)
     end
 
@@ -73,8 +73,12 @@ Cuba.define do
       rooms = rooms.select { |r| 
         real_age=r[AGE].to_i
         case age
-          when 'teen'
-            (17..19).include?real_age
+          when 'ua'
+            (1..17).include?real_age
+          when '18'
+            18==real_age
+          when '19'
+            19==real_age
           when '20s'
             (20..24).include?real_age
           when '25up'
