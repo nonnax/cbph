@@ -70,8 +70,10 @@ div.grid:hover{
   text-align: center;
 }
 
-.user{
+.grid{
   /* position: relative; */
+   border-radius: 5px;
+   border: 0.5px solid red;
 }
 .user > ul{
   font-size: 10px;
