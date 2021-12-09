@@ -32,9 +32,12 @@ Cuba.define do
     end
 
     on 'search/:page/:loc' do |page, loc|
-      loc_decoded=un(loc).gsub(/\W+/, '|')
+      # loc_decoded=un(loc).gsub(/\W+/, '|')
+      loc_decoded=un(loc)
       rooms = datastore()
-      rooms = rooms.select { |r| (/#{r[LOCATION].gsub(/\W+/, '|')}|#{r[USERNAME]}/i).match(loc_decoded) } unless loc_decoded.strip.empty?
+      rooms = rooms.select { |r| 
+            r[USERNAME].match(/#{loc_decoded}/i) || r[LOCATION].gsub(/\W+/, '|').match(/#{loc_decoded}/i) 
+        } unless loc_decoded.strip.empty?
       render_rooms(rooms, page, loc)
     end
 

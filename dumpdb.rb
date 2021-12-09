@@ -8,5 +8,6 @@ GDBM.open('users.db') do |gdbm|
   # end
   p gdbm.to_hash
   p gdbm.size
+  p gdbm.values.size
 end
 
