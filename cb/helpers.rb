@@ -4,8 +4,8 @@ require 'rubytools'
 require 'cubadoo'
 require 'array_ext'
 
-keys=%i[rec_id image_url username location age current_show is_hd is_new num_users num_followers chat_room_url_revshare]
-REC_ID, IMAGE_URL, USERNAME, LOCATION, AGE, CURRENT_SHOW, IS_HD, IS_NEW, NUM_USERS, NUM_FOLLOWERS, CHAT_ROOM_URL_REVSHARE = *(0..keys.size)
+keys=%i[rec_id image_url username location age current_show is_hd is_new num_users num_followers chat_room_url_revshare tags]
+REC_ID, IMAGE_URL, USERNAME, LOCATION, AGE, CURRENT_SHOW, IS_HD, IS_NEW, NUM_USERS, NUM_FOLLOWERS, CHAT_ROOM_URL_REVSHARE, TAGS = *(0..keys.size)
 OFFSET=54
 NEW = '⭐️'
 OLD = '❤️'
