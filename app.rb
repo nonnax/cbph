@@ -4,7 +4,7 @@
 # Id$ nonnax 2021-11-04 21:05:10 +0800
 require 'csv'
 require 'cgi'
-require_relative 'cb/helpers'
+require_relative 'cb/cb'
 
 Cuba.define do
   rooms = datastore()
