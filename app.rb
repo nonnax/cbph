@@ -8,7 +8,7 @@ require_relative 'cb/cb'
 
 Cuba.define do
   rooms = datastore()
-
+  
   on get do
 
     on 'search', param('q') do |q|
@@ -37,7 +37,7 @@ Cuba.define do
       rooms = datastore()
       rooms = rooms.select { |r| 
             r[USERNAME].match(/#{loc_decoded}/i) || 
-            r[LOCATION].gsub(/\W+/, '|').match(/#{loc_decoded}/i) ||
+            r[LOCATION].match(/#{loc_decoded}/i) ||
             JSON.parse(r[TAGS]).join(' ').match(/#{loc_decoded}/i)
         } unless loc_decoded.strip.empty?
       render_rooms(rooms, page, loc)
