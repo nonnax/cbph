@@ -7,6 +7,7 @@ require 'json'
 require 'fileutils'
 require 'rubytools/hash_ext'
 require 'rubytools/thread_ext'
+require 'rubytools/string_ext'
 require 'rubytools/xxhsum'
 require 'forwardable'
 require 'csv'
@@ -18,7 +19,7 @@ USERNAME=1
 class CBUpdater
   extend Forwardable
   def_delegators :@df, :map, :each
-  attr :picklist_ph, :picklist_beauty, :region_filter
+  attr :picklist_ph, :picklist_beauty, :region_filter, :config
   attr_accessor :df, :counter, :url
 
   def initialize(region: [])
@@ -28,6 +29,7 @@ class CBUpdater
     @counter=0
     @datastore = 'data.csv'
     @userstore = 'user.csv'
+    @config = JSON.parse(File.read('cb.config'))
     @userhash={}
     reset_datastore()
     load_userstore()
@@ -68,7 +70,7 @@ class CBUpdater
     end
     
     #"region 	asia | europe_russia | northamerica | southamerica | other region=asia&region=northamerica"
-    self.url = ['https://chaturbate.com/api/public/affiliates/onlinerooms/', params.to_query_string(repeat_keys: true)].join('?')
+    self.url = [config[:url].decode64, params.to_query_string(repeat_keys: true)].join('?')
     JSON.parse(Excon.get(url).body)
   end
   def update_counter
