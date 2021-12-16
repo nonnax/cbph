@@ -98,7 +98,7 @@ Cuba.class_eval do
               div_(class: 'user') do
                 ul_(class: 'basic') do
                   li_ { username }
-                  li_ { location }
+                  li_ { a_(class: 'page', href: "/search/1/#{location}") { location } }
                 end
                 ul_(class: 'extra') do
                   li_ { is_new=='true' ? NEW : OLD}
