@@ -19,13 +19,15 @@ USERNAME=1
 class CBUpdater
   extend Forwardable
   def_delegators :@df, :map, :each
-  attr :picklist_ph, :picklist_beauty, :region_filter
+  attr :picklist_ph, :picklist_beauty, :region_filter, :exhibitionist_filter
   attr_accessor :df, :counter, :url
 
-  def initialize(region: [])
+  def initialize(**h)
+    p h
     @df = []
     @url = ''
-    @region_filter = region
+    @region_filter = h[:region]
+    @exhibitionist_filter = h[:exhibitionist]
     @counter=0
     @datastore = 'data.csv'
     # @userstore = 'user.csv'
@@ -74,8 +76,12 @@ class CBUpdater
     }
     #if %w[asia europe_russia northamerica southamerica other].detect{|r| (/#{region_filter}/i).match(r)}
     #"region 	asia | europe_russia | northamerica | southamerica | other region=asia&region=northamerica"
-    unless region_filter.empty?
-      params.merge!(region: region_filter) 
+    unless region_filter.nil?
+      params.merge!(region: region_filter)
+    end
+
+    unless exhibitionist_filter.nil?
+      params.merge!(exhibitionist: true) 
     end
     
     self.url = ['https://chaturbate.com/api/public/affiliates/onlinerooms/', params.to_query_string(repeat_keys: true)].join('?')
@@ -118,10 +124,21 @@ class CBUpdater
   end
 end
 
-region_filter=ARGV
+require 'optparse'
+
+opts={}
+
+OptionParser.new do |o|
+  o.on '-e', '--exhibitionist=[TRUE]', 'exhibitionist (TRUE/FALSE)'
+  o.on '-r', '--region=[REGION]', 'asia europe_russia northamerica southamerica other', Array
+end.parse!(into: opts)
+
+
+region_filter=opts[:region]
+exhibitionist_filter=opts[:exhibitionist]
 
 t = []
-worker = CBUpdater.new(region: region_filter)
+worker = CBUpdater.new(**opts)
 
 info=Benchmark.measure do
   15.times do |i|    
