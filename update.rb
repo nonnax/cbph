@@ -21,16 +21,19 @@ REGIONS=%w[asia europe_russia northamerica southamerica other]
 class CBUpdater
   extend Forwardable
   def_delegators :@df, :map, :each
-  attr :picklist_ph, :picklist_beauty, :region_filter, :exhibitionist_filter, :config
+  attr :picklist_ph, :picklist_beauty, :region_filter, :exhibitionist_filter, 
+       :gender_filter, :config
   attr_accessor :df, :counter, :url
 
   def initialize(**h)
+    p h
     regions=nil
-    p regions=REGIONS.select{|e| h[:region].any?{|f| e.match(f)}} if h[:region]
+    regions=REGIONS.select{|e| h[:region].any?{|f| e.match(f)}} if h[:region]
     @df = []
     @url = ''
     @region_filter = regions
     @exhibitionist_filter = h[:exhibitionist]
+    @gender_filter = h[:gender]
     @counter=0
     @datastore = 'data.csv'
     # @userstore = 'user.csv'
@@ -40,7 +43,6 @@ class CBUpdater
     @datahash={}
     reset_datastore()
     load_userstore()
-    exit
   end
 
   def reset_datastore
@@ -83,6 +85,10 @@ class CBUpdater
     #"region 	asia | europe_russia | northamerica | southamerica | other region=asia&region=northamerica"
     unless region_filter.nil?
       params.merge!(region: region_filter)
+    end
+
+    unless gender_filter.nil?
+      params.merge!(region: gender_filter)
     end
 
     unless exhibitionist_filter.nil?
@@ -134,13 +140,15 @@ require 'optparse'
 opts={}
 
 OptionParser.new do |o|
-  o.on '-e', '--exhibitionist=[TRUE]', 'exhibitionist (TRUE/FALSE)'
+  o.on '-g', '--gender=[GENDER]', 'f m t c', Array
   o.on '-r', '--region=[REGION]', 'asia europe_russia northamerica southamerica other', Array
+  o.on '-e', '--exhibitionist=[TRUE]', 'exhibitionist (TRUE/FALSE)'
+
 end.parse!(into: opts)
 
+p opts
 
-region_filter=opts[:region]
-exhibitionist_filter=opts[:exhibitionist]
+exit
 
 t = []
 worker = CBUpdater.new(**opts)
