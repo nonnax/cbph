@@ -15,6 +15,7 @@ require 'monitor'
 require 'gdbm'
 
 USERNAME=1
+REGIONS=%w[asia europe_russia northamerica southamerica other]
 
 class CBUpdater
   extend Forwardable
@@ -23,10 +24,11 @@ class CBUpdater
   attr_accessor :df, :counter, :url
 
   def initialize(**h)
-    p h
+    regions=nil
+    p regions=REGIONS.select{|e| h[:region].any?{|f| e.match(f)}} if h[:region]
     @df = []
     @url = ''
-    @region_filter = h[:region]
+    @region_filter = regions
     @exhibitionist_filter = h[:exhibitionist]
     @counter=0
     @datastore = 'data.csv'
