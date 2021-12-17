@@ -88,7 +88,7 @@ class CBUpdater
     end
 
     unless gender_filter.nil?
-      params.merge!(region: gender_filter)
+      params.merge!(gender: gender_filter)
     end
 
     unless exhibitionist_filter.nil?
@@ -147,8 +147,6 @@ OptionParser.new do |o|
 end.parse!(into: opts)
 
 p opts
-
-exit
 
 t = []
 worker = CBUpdater.new(**opts)
