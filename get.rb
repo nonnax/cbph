@@ -109,7 +109,7 @@ class CBUpdater
       data = get(i * 500)
 
       return [] if data['results'].empty?
-      print [i, data['results'].size]
+      p [i, data['results'].size]
       # region 	asia | europe_russia | northamerica | southamerica | other
       keys = %w[image_url username location age current_show is_hd is_new num_users num_followers chat_room_url_revshare tags]
       data
