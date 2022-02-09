@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 # Id$ nonnax 2021-11-15 15:57:56 +0800
-./dlpick.rb && ./togrid live/*.jpg && lximage-qt live.jpg
+./get.rb && rm live/* && ./dlpick.rb && ./togrid live/*.jpg && lf_select live.jpg
