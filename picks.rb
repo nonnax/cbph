@@ -7,6 +7,7 @@ require 'rubytools/thread_ext'
 
 NAME_COL=2
 URL_COL=1
+URL='https://roomimg.stream.highwebmedia.com/ri/'
 
 data=CSV.parse(File.read('data.csv'))
 picks=CSV.parse(File.read('picklist')).flatten
@@ -25,7 +26,7 @@ def download(data, picks)
     online
       .each_with_index do |e, i| 
         t<<Thread.new(e, i)  do |e, i |
-            Downloader.download(e, 'live')
+            # Downloader.download(e, 'live')
             # print "%<size>d%%\r" % {size: (i/online.size.to_f)*100}
             title = "% <i>s of %{size}" % {i:, size: online.size}
             puts title.rjust(10)
@@ -35,5 +36,8 @@ def download(data, picks)
   t.map(&:join)
 end
 
-download(data, picks)
+# download(data, picks)
 
+get_data(data, picks).each do |l|
+  puts l
+end

@@ -4,24 +4,19 @@
 # Id$ nonnax 2021-11-03 00:19:48 +0800
 require 'excon'
 require 'json'
-require 'fileutils'
 require 'rubytools/hash_ext'
 require 'rubytools/thread_ext'
-require 'rubytools/file_ext'
 require 'rubytools/string_ext'
-require 'rubytools/xxhsum'
-require 'forwardable'
-require 'csv'
 require 'benchmark'
 require 'monitor'
+require 'csv'
 require 'gdbm'
 
 USERNAME = 1
 REGIONS = %w[asia europe_russia northamerica southamerica other].freeze
 
+
 class CBUpdater
-  extend Forwardable
-  def_delegators :@df, :map, :each
   attr :picklist_ph, :picklist_beauty, :region_filter, :exhibitionist_filter,
        :gender_filter, :config
   attr_accessor :df, :counter, :url
@@ -29,49 +24,23 @@ class CBUpdater
   def initialize(**h)
     regions = nil
     regions = REGIONS.select { |e| h[:region].any? { |f| e.match(f) } } if h[:region]
-    @df = []
     @url = ''
     @region_filter = regions
     @exhibitionist_filter = h[:exhibitionist]
     @gender_filter = h[:gender]
-    @counter = 0
-    @datastore = 'data.csv'
-    # @userstore = 'user.csv'
-    @userstore = 'users.db'
-    @config = JSON.parse(File.read('cb.conf'), symbolize_names: true)
-    @userhash = {}
-    @datahash = {}
     @userdata = {}
-    @userdata_file = 'userdata2.db'
-    reset_datastore
-    load_userstore
+    @config = JSON.parse(File.read('cb.conf'), symbolize_names: true)
+    @userdata_file = 'userdata.db'
+    @userdata_online = 'usersonline.csv'
   end
 
-  def reset_datastore
-    FileUtils.cp(@datastore, @datastore.filename_succ) if File.exist?(@datastore)
-    File.write(@datastore, '')
-  end
-
-  def load_userstore
-    Thread.new do
-      GDBM.open(@userstore) do |gdbm|
-        @userhash = gdbm.invert
-      end
-    end.join
-  end
-
-  def save_userstore
-    GDBM.open(@userstore) do |gdbm|
-      gdbm.update(@userhash.invert)
-    end
-  end
-
-  def save_datastore
+  def save_userdata
+    p 'saving....'
     GDBM.open(@userdata_file) do |db|
-      CSV.open(@datastore, 'w') do |csv|
-        @datahash.each do |k, u|
-          csv << [k] + u
+      CSV.open(@userdata_online, 'w') do |csv|
+        @userdata.each do |k, u|
           db[k] = u.to_json unless db.key?(k)
+          csv<<[k]
         end
       end
     end
@@ -89,17 +58,11 @@ class CBUpdater
     # if %w[asia europe_russia northamerica southamerica other].detect{|r| (/#{region_filter}/i).match(r)}
     # "region 	asia | europe_russia | northamerica | southamerica | other region=asia&region=northamerica"
     params.merge!(region: region_filter) unless region_filter.nil?
-
     params.merge!(gender: gender_filter) unless gender_filter.nil?
-
     params.merge!(exhibitionist: true) unless exhibitionist_filter.nil?
 
     self.url = [config[:url].decode64, params.to_query_string(repeat_keys: true)].join('?')
     JSON.parse(Excon.get(url).body)
-  end
-
-  def update_counter
-    @counter += 1
   end
 
   def populate_df(i)
@@ -108,40 +71,13 @@ class CBUpdater
       data = self.get(i * 500)
 
       return [] if data['results'].empty?
-
-      # puts JSON.pretty_generate data
-      sleep 0.5
       p [i, data['results'].size]
-      # region 	asia | europe_russia | northamerica | southamerica | other
-      keys = %w[image_url username location age current_show is_hd is_new num_users num_followers
-                chat_room_url_revshare tags]
-      data
-        .to_h['results']
-        .map do |r|
-          # row << r.values_at(*keys) if r['age'] && r['age'] < 140
-          row << r.values_at(*keys)
+      data['results']
+        .map do |h|
+          key=h['username']
+          @userdata[key]=h
         end
-      yield row.uniq.tap { |u| @df += u } # yield only new rows
       sleep 1
-    end
-  end
-
-  def populate_datahash(rows)
-    Monitor.new.synchronize do
-      rows.dup.each do |r|
-        unless user_hash = @userhash[r[USERNAME]]
-          user_hash = (@userhash[r[USERNAME]] = r[USERNAME].xxhsum)
-        end
-        @datahash[user_hash] = r
-      end
-    end
-  end
-
-  def populate_userdata(rows)
-    Monitor.new.synchronize do
-      rows.dup.each do |r|
-        @userdata[r[USERNAME]] = r
-      end
     end
   end
 end
@@ -156,27 +92,22 @@ OptionParser.new do |o|
   o.on '-e', '--exhibitionist=[TRUE]', 'exhibitionist (TRUE/FALSE)'
 end.parse!(into: opts)
 
-t = []
 worker = CBUpdater.new(**opts)
 
+t = []
 info = Benchmark.measure do
   15.times do |i|
-    t << Thread.new(i) do |i|
-      worker.populate_df(i) do |r|
-        worker.populate_datahash(r)
-      end
-    end
+    t << Thread.new(i){ |i| worker.populate_df(i) }
   end
-  t.map(&:join)
-  Thread.new do
-    worker.save_userstore
-    worker.save_datastore
-  end.join
+  t.map( &:join )
 end
+
+worker.save_userdata
 
 puts info
 puts worker.url
 puts "region filer:	#{$PROGRAM_NAME} asia europe_russia northamerica southamerica other"
+
 # https://chaturbate.com/api/public/affiliates/onlinerooms/?wm=LVTEy&client_ip=request_ip
 # Supported parameters
 # Param 	Choices 	Default 	Comments
