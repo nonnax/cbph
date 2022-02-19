@@ -1,43 +1,45 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
+
 # Id$ nonnax 2022-02-03 13:30:01 +0800
 require 'csv'
 require './downloader'
-require 'rubytools/console_ext'
+require 'benchmark'
+# require 'rubytools/console_ext'
 require 'rubytools/thread_ext'
+require './userdb'
 
-NAME_COL=2
-URL_COL=1
-URL='https://roomimg.stream.highwebmedia.com/ri/'
+save, = ARGV
 
-data=CSV.parse(File.read('data.csv'))
-picks=CSV.parse(File.read('picklist')).flatten
- 
-def get_data(data, picks)
-  # Monitor.new.synchronize do
-    data
-    .select{|e| picks.include?e[NAME_COL] }
-    .map{|e| e[URL_COL]}
-  # end
+# data = CSV.read('usersonline.csv').flatten
+# picks = CSV.read('userspicks.csv').flatten
+# 
+def get_data
+  db = UserDB.new
+  db.live_picks do |k|
+    db[k].values_at(:image_url, :username)
+  end
 end
 
-def download(data, picks)
-  t=[]
-    online=get_data(data, picks)
-    online
-      .each_with_index do |e, i| 
-        t<<Thread.new(e, i)  do |e, i |
-            # Downloader.download(e, 'live')
-            # print "%<size>d%%\r" % {size: (i/online.size.to_f)*100}
-            title = "% <i>s of %{size}" % {i:, size: online.size}
-            puts title.rjust(10)
-            sleep 0.5
-          end
+def download
+  t = []
+  online = get_data
+  online.each_with_index do |e, i|
+    t << Thread.new(e, i) do |e, i|
+      p [i.succ, online.size].join('/')
+      Downloader.download(e.first, 'live')
+      sleep 2
     end
+  end
   t.map(&:join)
 end
 
-# download(data, picks)
+bm=Benchmark.measure do 
+  download if save
 
-get_data(data, picks).each do |l|
-  puts l
+  get_data.each do |l|
+    puts l.join("\t")
+  end
 end
+
+puts bm

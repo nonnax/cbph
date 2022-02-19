@@ -1,3 +1,4 @@
 #!/usr/bin/env bash
 # Id$ nonnax 2021-11-15 14:20:51 +0800
 montage -density 300 -tile 4x0 -geometry +5+20 -border 5 live/*.jpg live.jpg
+lf_select live.jpg

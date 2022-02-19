@@ -11,73 +11,60 @@ class String
   end
 end
 
-class Hash
-  def method_missing(m, *args, **h, &)
-    fetch(m)
-  end
-end
-
 class UserDB
+
   # extend Forwardable
   # def_delegator :@gdbm, :close
   attr_reader :live, :picks, :keys
   
-  def initialize(f, f_online='usersonline.csv', f_picks='userspicks.csv', &block)
-    @fname=f
-    @live=CSV.read(f_online).flatten
-    p @picks=CSV.read(f_picks).flatten
-  end
-  
-  def grep(q, online: false, &block)
-    self.open do |db| 
-      db.values.grep(q).map do |e|
-        h = JSON.parse(e, symbolize_names: true)
-        if online
-          next unless live.include?(h[:username])
-        end
-        block[h] if block
-        h
-      end
-    end
+  def initialize(db:'udata.db', flive: 'uonline.csv', fpicks: 'upicks.csv', &block)
+    @fname=db
+    @live=CSV.read(flive)
+             .flatten
+    @picks=CSV.read(fpicks)
+              .flatten
+              .select{|k| self[k] } # discard upicks.csv junk              
   end
 
-  def reload_live(f_online)
-    @live=CSV.read(f_online).flatten
-  end
-
-  def reload_picks(f_picks)
-    @picks=CSV.read(f_picks).flatten
+  def [](k)
+    self.open do |db|
+      db[k].to_h if db.key?(k)
+    end
   end
   
-  def keys(online: false, &block)
-    self.open do |db| 
-      db.keys.select do |e|
-        online? ? live.include?(e) : e 
+  def grep(q, &block)
+      open do |db|
+        db
+        .values
+        .grep(q) # grep string values
+        .select{ |u| live.include?(u.to_h[:username]) }
+        .map(&:to_h)
       end
-    end
+  end
+  
+  def live_picks(&block)
+    live
+    .intersection(picks)
+    .map(&block)
+  end
+
+  def reload_live(flive)
+    @live=CSV.read(flive).flatten
+  end
+
+  def reload_picks(fpicks)
+    @picks=CSV.read(fpicks).flatten
+  end
+  
+  def live_keys(&)
+    live.map(&)
   end
 
   def values(&block)
-    found=nil
-    open do |db|
-      found=db.values.map{ |v| 
-        h=v.to_h
-        block[h] if block
-        h
-      }.map
-    end
-  end
-
-  def online(&block)
-    open do |db|
-      found=db.select do |k, v| 
-        live.include?(k)
-      end
-      found.map do |_, v|
-        h=v.to_h
-        block[h] if block
-        h
-      end.map
+    live.map do |k|
+      val=self[k]
+      block.call( val ) if block
+      val
     end
   end
 
