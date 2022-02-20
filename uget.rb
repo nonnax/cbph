@@ -7,6 +7,7 @@ require 'json'
 require 'rubytools/hash_ext'
 require 'rubytools/thread_ext'
 require 'rubytools/string_ext'
+require 'rubytools/file_ext'
 require 'benchmark'
 require 'monitor'
 require 'csv'
@@ -17,8 +18,9 @@ REGIONS = %w[asia europe_russia northamerica southamerica other].freeze
 
 
 class CBUpdater
-  attr :picklist_ph, :picklist_beauty, :region_filter, :exhibitionist_filter,
-       :gender_filter, :config
+  attr :picklist_ph, :picklist_beauty, :region_filter, 
+       :exhibitionist_filter, :gender_filter, :config
+       
   attr_accessor :df, :counter, :url
 
   def initialize(**h)
@@ -36,6 +38,7 @@ class CBUpdater
 
   def save_userdata
     p 'saving....'
+    File.backup(@userdata_online)
     GDBM.open(@userdata_file) do |db|
       CSV.open(@userdata_online, 'w') do |csv|
         @userdata.each do |k, u|

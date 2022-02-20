@@ -15,7 +15,7 @@ class UserDB
 
   # extend Forwardable
   # def_delegator :@gdbm, :close
-  attr_reader :live, :picks, :keys
+  attr_reader :picks, :keys
   
   def initialize(db:'udata.db', flive: 'uonline.csv', fpicks: 'upicks.csv', &block)
     @fname=db
@@ -37,14 +37,14 @@ class UserDB
         db
         .values
         .grep(q) # grep string values
-        .select{ |u| live.include?(u.to_h[:username]) }
+        .select{ |u| @live.include?(u.to_h[:username]) }
         .map(&:to_h)
       end
   end
   
   def live_picks(&block)
-    live
-    .intersection(picks)
+    @live
+    .intersection(@picks)
     .map(&block)
   end
 
@@ -56,12 +56,12 @@ class UserDB
     @picks=CSV.read(fpicks).flatten
   end
   
-  def live_keys(&)
-    live.map(&)
+  def live(range: (0..20), &block)
+    @live.slice(range).map(&block)
   end
 
   def values(&block)
-    live.map do |k|
+    @live.map do |k|
       val=self[k]
       block.call( val ) if block
       val

@@ -8,38 +8,39 @@ require 'benchmark'
 # require 'rubytools/console_ext'
 require 'rubytools/thread_ext'
 require './userdb'
+require 'optparse'
 
 save, = ARGV
 
-# data = CSV.read('usersonline.csv').flatten
-# picks = CSV.read('userspicks.csv').flatten
+opts={}
+OptionParser.new do |o|
+  o.on '-s', '--save'
+  o.on '-a', '--all'
+  # o.on '-s', '--save=[SAVE]', 'f m t c', Array
+end.parse!(into: opts)
+
+p opts
 # 
-def get_data
+def get_data(message: :live_picks)
   db = UserDB.new
-  db.live_picks do |k|
+  db.send(message).map do |k|
     db[k].values_at(:image_url, :username)
   end
 end
-
-def download
-  t = []
-  online = get_data
-  online.each_with_index do |e, i|
-    t << Thread.new(e, i) do |e, i|
-      p [i.succ, online.size].join('/')
-      Downloader.download(e.first, 'live')
-      sleep 2
-    end
-  end
-  t.map(&:join)
-end
+# 
+cmd={message: :live_picks}
+cmd={message: :live} if opts[:all]
 
 bm=Benchmark.measure do 
-  download if save
-
-  get_data.each do |l|
-    puts l.join("\t")
+  t=[]
+  get_data(**cmd).each do |e|
+    t<<Thread.new(e) do |e|
+      puts e.join("\t")
+      Downloader.download(e.first, 'live') if opts[:save]  
+      sleep 0.5
+    end
   end
+  p t.map(&:join).size
 end
 
 puts bm

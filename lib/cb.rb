@@ -36,8 +36,8 @@ Cuba.class_eval do
     html_ do
       head_ do
         meta_('http-equiv': 'refresh', content: '120')
-        # link(rel: 'stylesheet', type: "text/css",  href: '/css/style.css')
-        link_(rel: 'stylesheet', type: 'text/css', href: '/css/style001.css')
+        link_(rel: 'stylesheet', type: "text/css",  href: '/css/style.css')
+        # link_(rel: 'stylesheet', type: 'text/css', href: '/css/style001.css')
       end
       body_ do        
         div_( id: 'banner') do
@@ -160,7 +160,7 @@ Cuba.class_eval do
   end
 
   def picklist
-    File.read('./picklist').split("\n")
+    CSV.read('./upicks.csv').flatten
   end
 
   def pick_toggle(username)

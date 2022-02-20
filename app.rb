@@ -4,7 +4,7 @@
 # Id$ nonnax 2021-11-04 21:05:10 +0800
 require 'csv'
 require 'cgi'
-require_relative 'cb/cb'
+require_relative 'lib/cb'
 
 Cuba.define do
   rooms = datastore()
@@ -36,10 +36,8 @@ Cuba.define do
       loc_decoded=un(loc)
       rooms = datastore()
       rooms = rooms.select { |r| 
-            r[USERNAME].match(/#{loc_decoded}/i) || 
-            r[LOCATION].match(/#{loc_decoded}/i) ||
-            JSON.parse(r[TAGS]).join(' ').match(/#{loc_decoded}/i)
-        } unless loc_decoded.strip.empty?
+                r.grep(/#{loc_decoded}/i).size.positive?
+              } unless loc_decoded.strip.empty?
       render_rooms(rooms, page, loc)
     end
 

@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Id$ nonnax 2022-02-19 23:22:39 +0800
+compfile="$(ls *csv | fzf)"
+
+sort uonline.csv > tmp && cat tmp > uonline.csv
+sort $compfile > tmp && cat tmp > $compfile
+
+diff --color=auto -U 1000 $compfile uonline.csv | fzf --ansi
