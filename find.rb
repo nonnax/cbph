@@ -6,20 +6,9 @@ require 'csv'
 require 'rubytools/array_ext'
 require 'rubytools/array_table'
 
-# startpage=ARGV.shift
-
 class String
   def to_h
     JSON.parse(self, symbolize_names: true)
-  end
-end
-
-class Array
-  def pager(at: 1, max_items: 50)
-    n = [at.to_i-1, 0].max
-    start=(n*max_items)
-    p range=(n*max_items)...(start+max_items)
-    self[range]
   end
 end
 
@@ -49,16 +38,16 @@ def page(n, maxitems: 20)
   values.to_a[range]
 end
 
-def grep(q, location: nil)
+def grep(q=/./, location: nil, name: nil)
   dbase do |db|
     db
     .select{|k, v| v.match(q) }
     .select{|k, v| 
         location ? v.to_h[:location].match(/#{location}/i) : true
       }
-    # .select{|k, v|
-        # v.to_h[:username].match(q)
-      # }
+    .select{|k, v|
+        name ? v.to_h[:username].match(/#{name}/i) : true
+      }
   end
 end
 
@@ -67,36 +56,29 @@ require 'optparse'
 opts={}
 OptionParser.new do |o|
   o.on '-q', '--query[?]'
+  o.on '-n', '--name[?]'
   o.on '-w', '--where[?]'
   o.on '-l', '--live'
   o.on '-p', '--page[PAGE]', Integer
   o.on '-c', '--chunk[CHUNK]', Integer
 end.parse!(into: opts)
 
-# p page(startpage.to_i, maxitems: 50)&.size
 start_page=opts[:page]
 maxitems=opts[:chunk] || 50
-
-# exit
-# 
-# if start_page
-  # page(start_page, maxitems:).map do |v|
-    # v=> {username:, location:, image_url:, **reject}
-    # p [username:, location:]
-  # end
-# end
-q=opts[:query]
+q=opts[:query] || '.'
 w=opts[:where]
+n=opts[:name]
+
 if q
-  sel, rej = grep(/#{q}/i, location: w).partition{|k, v| keys.include?(k) } #.map{|k, v| k}
+  # sel, rej = grep(/#{q}/i, location: w).partition{|k, v| keys.include?(k) }
   # p 'select'
-  puts sel.map{|k, v| k}.each_slice(4).to_a.pad_rows.to_table unless sel.empty?
+  # puts sel.map{|k, v| k}.each_slice(4).to_a.pad_rows.to_table unless sel.empty?
   # p 'reject'
   # puts rej.map{|k, v| k}.each_slice(4).to_a.pad_rows.to_table unless rej.empty?
   
   t=[]
   found=[]
-  grep(/#{q.strip}/i, location: w).map do |k, v|
+  grep(/#{q.strip}/i, location: w, name: n).map do |k, v|
           next unless keys.any?(k) if opts[:live]
           t<<Thread.new do
             v &&=v.to_h
@@ -106,10 +88,9 @@ if q
   end
   t.map(&:join)
 
-  p found.compact!
-  
   puts found: found.size
-  found.pager(at: start_page.to_i, max_items: 50)&.each_with_index do |e, i|
+
+  found.pager(page: start_page.to_i, take: 50)&.each_with_index do |e, i|
     p e
   end
 
