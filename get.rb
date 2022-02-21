@@ -130,7 +130,7 @@ class CBUpdater
     Monitor.new.synchronize do
       rows.dup.each do |r|
         unless user_hash = @userhash[r[USERNAME]]
-          user_hash = (@userhash[r[USERNAME]] = r[USERNAME].xxhsum)
+          user_hash = (@userhash[r[USERNAME]] = r[USERNAME].xxhash)
         end
         @datahash[user_hash] = r
       end

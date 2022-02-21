@@ -34,21 +34,9 @@ require './userdb'
 require 'csv'
 require 'json'
 
-udb=UserDB.new('userdata.db')
+udb=UserDB.new #('userdata.db')
 i=0
 
-if q
-  rb=udb.grep(/#{q}/, online:true){ |r|
-     r=>{username:, location:, image_url:, **reject}
-     loc=(location.size>30 ? location[0..30]+'...' : location)
-     puts [image_url, username, loc].join("\t")
-  }
-  p found: rb.compact.size
-else
-  # 
-  udb.live_picks.each do |k|
-    next if udb[k].nil?
-    puts udb[k].values_at(:image_url, :username, :location).join("\t") 
-  end
-  p picks: udb.live_picks.size
+udb.grep(/#{q}/i).each do |u|
+  p u
 end

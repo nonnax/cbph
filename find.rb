@@ -1,120 +1,122 @@
 #!/usr/bin/env ruby
-# frozen_string_literal: true
-
-# Id$ nonnax 2021-11-03 00:19:48 +0800
-require 'excon'
-require 'json'
-require 'rubytools/hash_ext'
-require 'rubytools/thread_ext'
-require 'rubytools/string_ext'
-require 'rubytools/file_ext'
-require 'benchmark'
-require 'monitor'
-require 'csv'
+# Id$ nonnax 2022-02-20 23:22:33 +0800
 require 'gdbm'
+require 'json'
+require 'csv'
+require 'rubytools/array_ext'
+require 'rubytools/array_table'
 
-USERNAME = 1
-REGIONS = %w[asia europe_russia northamerica southamerica other].freeze
+# startpage=ARGV.shift
 
-
-class CBUpdater
-  attr :picklist_ph, :picklist_beauty, :region_filter, 
-       :exhibitionist_filter, :gender_filter, :config
-       
-  attr_accessor :df, :counter, :url
-
-  def initialize(**h)
-    regions = nil
-    regions = REGIONS.select { |e| h[:region].any? { |f| e.match(f) } } if h[:region]
-    @url = ''
-    @region_filter = regions
-    @exhibitionist_filter = h[:exhibitionist]
-    @gender_filter = h[:gender]
-    @userdata = {}
-    @config = JSON.parse(File.read('cb.conf'), symbolize_names: true)
-    @userdata_file = 'userdata.db'
-    @userdata_online = 'uonline.csv'
+class String
+  def to_h
+    JSON.parse(self, symbolize_names: true)
   end
+end
 
-  def save_userdata
-    p 'saving....'
-    File.backup(@userdata_online)
-
-    GDBM.open(@userdata_file) do |db|
-      @userdata.each do |k, u|
-        db[k] = u.to_json unless db[k]
-      end
-    end
-
-    CSV.open(@userdata_online, 'w') do |csv|
-      @userdata.each do |k, u|
-        csv<<[k]
-      end
-    end
-
+class Array
+  def pager(at: 1, max_items: 50)
+    n = [at.to_i-1, 0].max
+    start=(n*max_items)
+    p range=(n*max_items)...(start+max_items)
+    self[range]
   end
+end
 
-  def get(offset, display_count = 500)
-    params = {
-      wm: 'LVTEy',
-      client_ip: 'request_ip',
-      limit: display_count,
-      offset: offset,
-      gender: 'f',
-      format: 'json'
-    }
-    # if %w[asia europe_russia northamerica southamerica other].detect{|r| (/#{region_filter}/i).match(r)}
-    # "region 	asia | europe_russia | northamerica | southamerica | other region=asia&region=northamerica"
-    params.merge!(region: region_filter) unless region_filter.nil?
-    params.merge!(gender: gender_filter) unless gender_filter.nil?
-    params.merge!(exhibitionist: true) unless exhibitionist_filter.nil?
+def keys(f='uonline.csv')
+  keys_passed = File.readlines(f, chomp: true)
+end
 
-    self.url = [config[:url].decode64, params.to_query_string(repeat_keys: true)].join('?')
-    JSON.parse(Excon.get(url).body)
+def dbase(&)
+  GDBM.open("userdata.db", &)
+end
+
+def values(&block)
+  dbase do |db|
+    db
+    .keys
+    .intersection(keys)
+    .map{|k| db[k].to_h }
+    .map
   end
+end
 
-  def populate_df(i)
-    Monitor.new.synchronize do
-      row = []
-      data = self.get(i * 500)
+def page(n, maxitems: 20)
+  n &&= n-1
+  n = [n, 0].max
+  start=(n*maxitems)
+  p range=(n*maxitems)...(start+maxitems)
+  values.to_a[range]
+end
 
-      return [] if data['results'].empty?
-      p [i, data['results'].size]
-      data['results']
-        .map do |h|
-          key=h['username']
-          @userdata[key]=h
-        end
-      sleep 1.5
-    end
+def grep(q, location: nil)
+  dbase do |db|
+    db
+    .select{|k, v| v.match(q) }
+    .select{|k, v| 
+        location ? v.to_h[:location].match(/#{location}/i) : true
+      }
+    # .select{|k, v|
+        # v.to_h[:username].match(q)
+      # }
   end
 end
 
 require 'optparse'
 
-opts = {}
-
+opts={}
 OptionParser.new do |o|
-  o.on '-g', '--gender=[GENDER]', 'f m t c', Array
-  o.on '-r', '--region=[REGION]', 'asia europe_russia northamerica southamerica other', Array
-  o.on '-e', '--exhibitionist=[TRUE]', 'exhibitionist (TRUE/FALSE)'
+  o.on '-q', '--query[?]'
+  o.on '-w', '--where[?]'
+  o.on '-l', '--live'
+  o.on '-p', '--page[PAGE]', Integer
+  o.on '-c', '--chunk[CHUNK]', Integer
 end.parse!(into: opts)
 
-worker = CBUpdater.new(**opts)
+# p page(startpage.to_i, maxitems: 50)&.size
+start_page=opts[:page]
+maxitems=opts[:chunk] || 50
 
-t = []
-info = Benchmark.measure do
-  15.times do |i|
-    t << Thread.new(i){ |i| worker.populate_df(i) }
+# exit
+# 
+# if start_page
+  # page(start_page, maxitems:).map do |v|
+    # v=> {username:, location:, image_url:, **reject}
+    # p [username:, location:]
+  # end
+# end
+q=opts[:query]
+w=opts[:where]
+if q
+  sel, rej = grep(/#{q}/i, location: w).partition{|k, v| keys.include?(k) } #.map{|k, v| k}
+  # p 'select'
+  puts sel.map{|k, v| k}.each_slice(4).to_a.pad_rows.to_table unless sel.empty?
+  # p 'reject'
+  # puts rej.map{|k, v| k}.each_slice(4).to_a.pad_rows.to_table unless rej.empty?
+  
+  t=[]
+  found=[]
+  grep(/#{q.strip}/i, location: w).map do |k, v|
+          next unless keys.any?(k) if opts[:live]
+          t<<Thread.new do
+            v &&=v.to_h
+            v => {username:, location:, image_url:, **reject}
+            found<<{username:, location:, image_url:}
+          end
   end
-  t.map( &:join )
+  t.map(&:join)
+
+  p found.compact!
+  
+  puts found: found.size
+  found.pager(at: start_page.to_i, max_items: 50)&.each_with_index do |e, i|
+    p e
+  end
+
 end
 
-worker.save_userdata
+puts opts.to_a.map{|e| e.join(":")}.join(", ")
 
-puts info
-puts worker.url
-puts "region filer:	#{$PROGRAM_NAME} asia europe_russia northamerica southamerica other"
 
 # https://chaturbate.com/api/public/affiliates/onlinerooms/?wm=LVTEy&client_ip=request_ip
 # Supported parameters

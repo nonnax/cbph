@@ -60,6 +60,13 @@ class UserDB
     @live.slice(range).map(&block)
   end
 
+  def page(n, &block)
+    n &&= ((n.to_i-1)*20)
+    n = [n, 0].max
+    p range=(n..(n+20-1))
+    live( range: , &block)
+  end
+
   def values(&block)
     @live.map do |k|
       val=self[k]
