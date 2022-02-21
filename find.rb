@@ -1,102 +1,73 @@
 #!/usr/bin/env ruby
-# Id$ nonnax 2022-02-20 23:22:33 +0800
+# Id$ nonnax 2022-02-21 19:21:03 +0800
 require 'gdbm'
+require 'optparse'
 require 'json'
-require 'csv'
-require 'rubytools/array_ext'
 require 'rubytools/array_table'
+require 'rubytools/numeric_ext'
 
 class String
-  def to_h
+  def as_hash
     JSON.parse(self, symbolize_names: true)
   end
 end
 
-def keys(f='uonline.csv')
-  keys_passed = File.readlines(f, chomp: true)
+class << self
+  attr :live_keys, :name, :where, :live
 end
 
-def dbase(&)
-  GDBM.open("userdata.db", &)
+
+@live_keys=File.readlines('uonline.csv', chomp: true)
+
+
+def find(q, &)
+  
+  GDBM.open("userdata.db"){|db|
+    table=
+    db.values.grep(q).map{|e|
+        e.as_hash => { username:, location:, age:, num_followers:, image_url: }
+        next unless live_keys.include?(username) if live
+        { username:, location:, age:, num_followers:, image_url:}
+    }
+    .compact
+    .select{|e|
+      e => { location: }
+      where ? location.match?(/#{where}/i) : true
+    }
+    .select{|e|
+      e => { username: }
+      name ? username.match?(/#{name}/i) : true
+    }
+    .map{|e| e.values }
+    .sort_by{|h| h[-2] }
+    .reverse
+    
+    table.to_table(&) unless table.empty?
+  }
 end
 
-def values(&block)
-  dbase do |db|
-    db
-    .keys
-    .intersection(keys)
-    .map{|k| db[k].to_h }
-    .map
-  end
-end
 
-def page(n, maxitems: 20)
-  n &&= n-1
-  n = [n, 0].max
-  start=(n*maxitems)
-  p range=(n*maxitems)...(start+maxitems)
-  values.to_a[range]
-end
-
-def grep(q=/./, location: nil, name: nil)
-  dbase do |db|
-    db
-    .select{|k, v| v.match(q) }
-    .select{|k, v| 
-        location ? v.to_h[:location].match(/#{location}/i) : true
-      }
-    .select{|k, v|
-        name ? v.to_h[:username].match(/#{name}/i) : true
-      }
-  end
-end
-
-require 'optparse'
+# begin
 
 opts={}
+
 OptionParser.new do |o|
-  o.on '-q', '--query[?]'
-  o.on '-n', '--name[?]'
-  o.on '-w', '--where[?]'
+  o.on '-n', '--name[STRING]'
+  o.on '-w', '--where[STRING]'
   o.on '-l', '--live'
-  o.on '-p', '--page[PAGE]', Integer
-  o.on '-c', '--chunk[CHUNK]', Integer
 end.parse!(into: opts)
 
-start_page=opts[:page]
-maxitems=opts[:chunk] || 50
-q=opts[:query] || '.'
-w=opts[:where]
-n=opts[:name]
+@name=opts[:name]
+@where=opts[:where]
+@live=opts[:live]
 
-if q
-  # sel, rej = grep(/#{q}/i, location: w).partition{|k, v| keys.include?(k) }
-  # p 'select'
-  # puts sel.map{|k, v| k}.each_slice(4).to_a.pad_rows.to_table unless sel.empty?
-  # p 'reject'
-  # puts rej.map{|k, v| k}.each_slice(4).to_a.pad_rows.to_table unless rej.empty?
-  
-  t=[]
-  found=[]
-  grep(/#{q.strip}/i, location: w, name: n).map do |k, v|
-          next unless keys.any?(k) if opts[:live]
-          t<<Thread.new do
-            v &&=v.to_h
-            v => {username:, location:, image_url:, **reject}
-            found<<{username:, location:, image_url:}
-          end
-  end
-  t.map(&:join)
+q, _=ARGV
+q=/#{q}/i
 
-  puts found: found.size
 
-  found.pager(page: start_page.to_i, take: 50)&.each_with_index do |e, i|
-    p e
-  end
-
-end
-
-puts opts.to_a.map{|e| e.join(":")}.join(", ")
+find(q){|e|
+  puts e.join('  ')
+}
 
 
 # https://chaturbate.com/api/public/affiliates/onlinerooms/?wm=LVTEy&client_ip=request_ip
@@ -121,35 +92,6 @@ puts opts.to_a.map{|e| e.join(":")}.join(", ")
 # {
 #   "count": 5428,
 #   "results": [
-# {
-#   "username": "kikicola",
-#   "spoken_languages": "English",
-#   "tags": [
-#     "18",
-#     "asian",
-#     "daddy",
-#     "natural",
-#     "teen"
-#   ],
-#   "current_show": "public",
-#   "is_new": false,
-#   "num_followers": 24355,
-#   "birthday": "2003-06-13",
-#   "is_hd": true,
-#   "iframe_embed": "<iframe src='https://chaturbate.com/in/?tour=Jrvi&amp;campaign=LVTEy&amp;track=embed&amp;room=kikicola&amp;bgcolor=white' height=528 width=850 style='border: none;'></iframe>",
-#   "seconds_online": 17143,
-#   "display_name": "kikicola",
-#   "gender": "f",
-#   "age": 18,
-#   "image_url_360x270": "https://roomimg.stream.highwebmedia.com/ri/kikicola.jpg",
-#   "num_users": 12763,
-#   "chat_room_url": "https://chaturbate.com/in/?tour=yiMH&campaign=LVTEy&track=default&room=kikicola",
-#   "image_url": "https://roomimg.stream.highwebmedia.com/ri/kikicola.jpg",
-#   "location": "Somewhere",
-#   "room_subject": "im a little shy~ - Repeating Goal: striptease - #18 #asian #daddy #natural #teen",
-#   "chat_room_url_revshare": "https://chaturbate.com/in/?tour=LQps&campaign=LVTEy&track=default&room=kikicola",
-#   "iframe_embed_revshare": "<iframe src='https://chaturbate.com/in/?tour=9oGW&amp;campaign=LVTEy&amp;track=embed&amp;room=kikicola&amp;bgcolor=white' height=528 width=850 style='border: none;'></iframe>"
-#  },
 #  {
 # "username": "me_emily",
 # "spoken_languages": "english",
@@ -179,34 +121,5 @@ puts opts.to_a.map{|e| e.join(":")}.join(", ")
 #   "chat_room_url_revshare": "https://chaturbate.com/in/?tour=LQps&campaign=LVTEy&track=default&room=me_emily",
 #   "iframe_embed_revshare": "<iframe src='https://chaturbate.com/in/?tour=9oGW&amp;campaign=LVTEy&amp;track=embed&amp;room=me_emily&amp;bgcolor=white' height=528 width=850 style='border: none;'></iframe>"
 #  },
-#  {
-# "username": "urdreamolivia69",
-# "spoken_languages": "English",
-# "tags": [
-#   "hairy",
-#   "new",
-#   "squirt",
-#   "asian",
-#   "mistress"
 # ],
-#   "current_show": "public",
-#   "is_new": false,
-#   "num_followers": 392,
-#   "birthday": "",
-#   "is_hd": false,
-#   "iframe_embed": "<iframe src='https://chaturbate.com/in/?tour=Jrvi&amp;campaign=LVTEy&amp;track=embed&amp;room=urdreamolivia69&amp;bgcolor=white' height=528 width=850 style='border: none;'></iframe>",
-#   "seconds_online": 197,
-#   "display_name": "Maria",
-#   "gender": "f",
-#   "age": null,
-#   "image_url_360x270": "https://roomimg.stream.highwebmedia.com/ri/urdreamolivia69.jpg",
-#   "num_users": 1,
-#   "chat_room_url": "https://chaturbate.com/in/?tour=yiMH&campaign=LVTEy&track=default&room=urdreamolivia69",
-#   "image_url": "https://roomimg.stream.highwebmedia.com/ri/urdreamolivia69.jpg",
-#   "location": "Bangkok Thailand",
-#   "room_subject": "Fuck and cum on my wet creamy pussy  #hairy #squirt  #new #asian #mistress",
-#   "chat_room_url_revshare": "https://chaturbate.com/in/?tour=LQps&campaign=LVTEy&track=default&room=urdreamolivia69",
-#   "iframe_embed_revshare": "<iframe src='https://chaturbate.com/in/?tour=9oGW&amp;campaign=LVTEy&amp;track=embed&amp;room=urdreamolivia69&amp;bgcolor=white' height=528 width=850 style='border: none;'></iframe>"
-#   },
-#  ]
-# }
+#}
