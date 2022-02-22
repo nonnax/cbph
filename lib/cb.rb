@@ -16,6 +16,10 @@ REMOVE = '✖️'
 # TITLE = '𝕔𝕒𝕞𝕠𝕙𝕠𝕝𝕚𝕔𝕤+𝕒𝕟𝕠𝕟𝕪𝕞𝕠𝕦𝕤'
 TITLE = '𝕔𝕒𝕞+𝕠+𝕙𝕠𝕝𝕚𝕔𝕤+𝕒𝕟𝕠𝕟𝕪𝕞𝕠𝕦𝕤'
 
+def ydl(name)
+  u=["https://chaturbate.com", name].join('/')
+  IO.popen(%W[youtube-dl #{u}], &:read)
+end
 
 Cuba.class_eval do
   def _layout(&block)

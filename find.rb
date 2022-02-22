@@ -1,4 +1,6 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
+
 # Id$ nonnax 2022-02-21 19:21:03 +0800
 require 'gdbm'
 require 'optparse'
@@ -13,62 +15,61 @@ class String
 end
 
 class << self
-  attr :live_keys, :name, :where, :live
+  attr :db, :live_keys, :name, :where, :live, :pick_file
 end
 
-
-@live_keys=File.readlines('uonline.csv', chomp: true)
-
+def live_db
+  [live, pick_file].any? ? db.slice(*@live_keys) : db
+end
 
 def find(q, &)
-  
-  GDBM.open("userdata.db"){|db|
-    table=
-    db.values.grep(q).map{|e|
-        e.as_hash => { username:, location:, age:, num_followers:, image_url: }
-        next unless live_keys.include?(username) if live
-        { username:, location:, age:, num_followers:, image_url:}
-    }
-    .compact
-    .select{|e|
-      e => { location: }
-      where ? location.match?(/#{where}/i) : true
-    }
-    .select{|e|
-      e => { username: }
-      name ? username.match?(/#{name}/i) : true
-    }
-    .map{|e| e.values }
-    .sort_by{|h| h[-2] }
-    .reverse
-    
-    table.to_table(&) unless table.empty?
-  }
+  table =
+    live_db
+    .values
+    .grep(q)  do |e|
+      e.as_hash => { username:, location:, age:, num_followers:, image_url: }
+      { username:, location: location[0..30], age:, num_followers:, image_url: }
+    end
+    .select{ |e| e[:location].match?(/#{where}/i)}
+    .select{ |e| e[:username].match?(/#{name}/i)}
+    .map(&:values)
+    .sort_by { |h| h[-2] }
+    # .reverse
+  # table.each{|e| puts e.join("\t") }
+  table.to_table(&) unless table.empty?
 end
-
 
 # begin
 
-opts={}
+opts = {}
 
 OptionParser.new do |o|
-  o.on '-n', '--name[STRING]'
-  o.on '-w', '--where[STRING]'
+  o.on '-n', '--name=[STRING]'
+  o.on '-w', '--where=[STRING]'
   o.on '-l', '--live'
+  o.on '-p', '--pick=FILE'
 end.parse!(into: opts)
 
-@name=opts[:name]
-@where=opts[:where]
-@live=opts[:live]
+@name = opts[:name]
+@where = opts[:where]
+@live = opts[:live]
 
-q, _=ARGV
-q=/#{q}/i
+@live_file = 'uonline.csv'
+@db = GDBM.open('userdata.db', &:to_h)
+@live_keys = File.readlines(@live_file, chomp: true)
+
+@pick_file = opts[:pick]
+if @pick_file
+  picks = File.readlines(@pick_file, chomp: true)
+  @live_keys = @live_keys.intersection(picks)
+end
 
 
-find(q){|e|
-  puts e.join('  ')
-}
-
+q, = ARGV
+q = /#{q}/i
+find(q) do |e|
+    puts e.join("\t")
+end
 
 # https://chaturbate.com/api/public/affiliates/onlinerooms/?wm=LVTEy&client_ip=request_ip
 # Supported parameters
@@ -122,4 +123,4 @@ find(q){|e|
 #   "iframe_embed_revshare": "<iframe src='https://chaturbate.com/in/?tour=9oGW&amp;campaign=LVTEy&amp;track=embed&amp;room=me_emily&amp;bgcolor=white' height=528 width=850 style='border: none;'></iframe>"
 #  },
 # ],
-#}
+# }
