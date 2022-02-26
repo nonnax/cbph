@@ -1,120 +1,81 @@
 #!/usr/bin/env ruby
-# frozen_string_literal: true
-
-# Id$ nonnax 2021-11-03 00:19:48 +0800
-require 'excon'
-require 'json'
-require 'rubytools/hash_ext'
-require 'rubytools/thread_ext'
-require 'rubytools/string_ext'
-require 'rubytools/file_ext'
-require 'benchmark'
-require 'monitor'
-require 'csv'
+# Id$ nonnax 2022-02-20 23:22:33 +0800
 require 'gdbm'
+require 'json'
+require 'csv'
+require 'rubytools/array_ext'
+require 'rubytools/array_table'
+require 'forwardable'
 
-USERNAME = 1
-REGIONS = %w[asia europe_russia northamerica southamerica other].freeze
 
-
-class CBUpdater
-  attr :picklist_ph, :picklist_beauty, :region_filter, 
-       :exhibitionist_filter, :gender_filter, :config
-       
-  attr_accessor :df, :counter, :url
-
-  def initialize(**h)
-    regions = nil
-    regions = REGIONS.select { |e| h[:region].any? { |f| e.match(f) } } if h[:region]
-    @url = ''
-    @region_filter = regions
-    @exhibitionist_filter = h[:exhibitionist]
-    @gender_filter = h[:gender]
-    @userdata = {}
-    @config = JSON.parse(File.read('cb.conf'), symbolize_names: true)
-    @userdata_file = 'userdata.db'
-    @userdata_online = 'uonline.csv'
+class String
+  def as_hash
+    JSON.parse(self, symbolize_names: true)
   end
+  alias :to_h :as_hash
+end
 
-  def save_userdata
-    p 'saving....'
-    File.backup(@userdata_online)
-
-    GDBM.open(@userdata_file) do |db|
-      @userdata.each do |k, u|
-        db[k] = u.to_json unless db[k]
-      end
+class Model
+  extend Forwardable
+  def_delegators :@hash, :keys, :values, :key?, :value?, :size, :each, :values_at
+  def initialize(h, attr: true)
+    @hash=h
+    @hash.keys.each do |m|
+      define_singleton_method(m) do
+        @hash.fetch(m) #read-only attr
+      end if attr
     end
-
-    CSV.open(@userdata_online, 'w') do |csv|
-      @userdata.each do |k, u|
-        csv<<[k]
-      end
-    end
-
   end
-
-  def get(offset, display_count = 500)
-    params = {
-      wm: 'LVTEy',
-      client_ip: 'request_ip',
-      limit: display_count,
-      offset: offset,
-      gender: 'f',
-      format: 'json'
-    }
-    # if %w[asia europe_russia northamerica southamerica other].detect{|r| (/#{region_filter}/i).match(r)}
-    # "region 	asia | europe_russia | northamerica | southamerica | other region=asia&region=northamerica"
-    params.merge!(region: region_filter) unless region_filter.nil?
-    params.merge!(gender: gender_filter) unless gender_filter.nil?
-    params.merge!(exhibitionist: true) unless exhibitionist_filter.nil?
-
-    self.url = [config[:url].decode64, params.to_query_string(repeat_keys: true)].join('?')
-    JSON.parse(Excon.get(url).body)
-  end
-
-  def populate_df(i)
-    Monitor.new.synchronize do
-      row = []
-      data = self.get(i * 500)
-
-      return [] if data['results'].empty?
-      p [i, data['results'].size]
-      data['results']
-        .map do |h|
-          key=h['username']
-          @userdata[key]=h
-        end
-      sleep 1.5
-    end
+  def inspect
+    pp @hash
+    nil
   end
 end
 
-require 'optparse'
-
-opts = {}
-
-OptionParser.new do |o|
-  o.on '-g', '--gender=[GENDER]', 'f m t c', Array
-  o.on '-r', '--region=[REGION]', 'asia europe_russia northamerica southamerica other', Array
-  o.on '-e', '--exhibitionist=[TRUE]', 'exhibitionist (TRUE/FALSE)'
-end.parse!(into: opts)
-
-worker = CBUpdater.new(**opts)
-
-t = []
-info = Benchmark.measure do
-  15.times do |i|
-    t << Thread.new(i){ |i| worker.populate_df(i) }
+class Hash
+  def to_model
+    Model.new(self)
   end
-  t.map( &:join )
 end
 
-worker.save_userdata
 
-puts info
-puts worker.url
-puts "region filer:	#{$PROGRAM_NAME} asia europe_russia northamerica southamerica other"
+
+class DB
+  F_ONLINE = '/tmp/uonline.csv'
+  F_PICKS = 'upicks.csv'
+  F_USERDATA = 'userdata.db'
+
+  EXCEPT=%i[chat_room_url iframe_embed image_url_360x270 chat_room_url_revshare iframe_embed_revshare room_subject]
+
+  extend Forwardable
+  def_delegators :@dbase, :keys, :values, :key?, 
+                 :size, :each, :select, :reject
+
+  attr :dbase,  :pick_keys
+  attr_accessor :live_keys
+  
+  def initialize(file: F_USERDATA)
+    @live_keys=File.readlines(F_ONLINE, chomp: true)
+    @pick_keys=File.readlines(F_PICKS, chomp: true)
+    @db_file=file
+    GDBM.open(@db_file){|db| @dbase=db.to_h.except(*EXCEPT) }
+  end
+
+  def self.cb(&block)
+    new.instance_eval(&block)
+  end
+
+  def [](key)
+    dbase[key].as_hash
+  end
+
+  def each_slice(n=100)
+    @dbase.slice(*@live_keys).each_slice(n)
+  end
+  alias live_slice each_slice
+  
+end
+
 
 # https://chaturbate.com/api/public/affiliates/onlinerooms/?wm=LVTEy&client_ip=request_ip
 # Supported parameters

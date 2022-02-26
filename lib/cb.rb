@@ -21,6 +21,11 @@ def ydl(name)
   IO.popen(%W[youtube-dl #{u}], &:read)
 end
 
+def browse(name)
+  u=["https://chaturbate.com", name].join('/')
+  IO.popen([ENV['BROWSER'], u], &:read)
+end
+
 Cuba.class_eval do
   def _layout(&block)
     groups={

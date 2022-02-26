@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 # Id$ nonnax 2021-11-15 15:57:56 +0800
-./uget.rb && rm live/* && ./picks.rb -s "save" && ./togrid live/*.jpg && lf_select live.jpg
+./cget.rb && rm live/* && ./picks.rb -s "save" && ./togrid live/*.jpg && lf_select live.jpg

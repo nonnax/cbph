@@ -20,21 +20,22 @@ criteria={
 DB.cb do |db|
   db.live_keys = db.live_keys & db.pick_keys if opts[:picks]
   live=db.each_slice
+
   found=[]
   loop do
     live
-        .next
-        .map{|k, v| v}
-        .map(&:to_h)
-        .map{|v| v[:age]=v[:age].to_i; v} # age: nil -> 0
-        .grep_hash(**criteria){|e| e.all?}
-        .map{|v|
-          unless v.empty?
-            v =>{ username:, location:, age:, image_url:}
-            found << { username:, location: location[0..30], age: age.to_s, image_url:}
-          end
-        }
+      .next
+      .map{|k, _| db[k]}
+      .map{|v| v[:age]=v[:age].to_i; v} # age: nil -> 0
+      .grep_hash(**criteria){|e| e.all?}
+      .each{|v|
+        unless v.empty?
+          v =>{ username:, location:, age:, image_url:}
+          found << { username:, location: location[0..30], age: age.to_s, image_url:}
+        end
+      }
   end
+
   found.each{|e| puts e.values.join("\t")}
   p found.size
 end
