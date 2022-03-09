@@ -9,6 +9,7 @@ OptionParser.new do |o|
   o.on '-n', '--name=NAME_REGEXP'
   o.on '-a', '--age=AGE_REGEXP'
   o.on '-p', '--picks'
+  o.on '-n', '--numpage=[PAGE]'
 end.parse!(into: opts)
 
 criteria={
@@ -20,12 +21,12 @@ criteria={
 DB.cb do |db|
   db.live_keys = db.live_keys & db.pick_keys if opts[:picks]
   live=db.each_slice
-
+  # live=db.each_slice.to_a[opts[:numpage].to_i].map{|a| [a.last]}.map if opts[:numpage]
   found=[]
   loop do
     live
       .next
-      .map{|k, _| db[k]}
+      .map{|k, _| db[k] if db.key?(k) }
       .map{|v| v[:age]=v[:age].to_i; v} # age: nil -> 0
       .grep_hash(**criteria){|e| e.all?}
       .each{|v|

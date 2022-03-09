@@ -35,6 +35,7 @@ class CBUpdater
     @config = JSON.parse(File.read('cb.conf'), symbolize_names: true)
     @userdata_file = DB::F_USERDATA
     @userdata_online = DB::F_ONLINE 
+    @monitor=Monitor.new
   end
 
   def save_userdata
@@ -75,7 +76,7 @@ class CBUpdater
   end
 
   def populate_df(i)
-    Monitor.new.synchronize do
+    @monitor.synchronize do
       row = []
       data = self.get(i * 500)
 

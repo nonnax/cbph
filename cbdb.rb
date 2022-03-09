@@ -73,7 +73,10 @@ class DB
     @dbase.slice(*@live_keys).each_slice(n)
   end
   alias live_slice each_slice
-  
+
+  def page(n, take: 20, &block)
+    each_slice(take).to_a[n]
+  end  
 end
 
 

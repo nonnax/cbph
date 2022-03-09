@@ -23,7 +23,7 @@ end
 
 def browse(name)
   u=["https://chaturbate.com", name].join('/')
-  IO.popen([ENV['BROWSER'], u], &:read)
+  fork{ IO.popen([ENV['BROWSER'], u], &:read) }
 end
 
 Cuba.class_eval do
@@ -173,12 +173,11 @@ Cuba.class_eval do
   end
 
   def pick_toggle(username)
-    Thread.new do
+    fork do
       plist=picklist
       plist.include?(username) ? plist.delete(username) : plist.push(username) 
       File.write('picklist', plist.join("\n"))
-      sleep 1
-    end.join
+    end
   end
      
 end

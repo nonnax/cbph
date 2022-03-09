@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 # Id$ nonnax 2021-11-15 15:57:56 +0800
-./uget.rb && ./picks.rb | ruby -ane 'puts "[[https://chaturbate.com/%s/|{{%s}}]]" % $F.values_at(-1, 0).flatten' | creolize > picks.html && firefox picks.html &
+./cget.rb && ./picks.rb | ruby -ane 'puts "[[https://chaturbate.com/%s/|{{%s}}]]" % $F.values_at(-1, 0).flatten' | creolize > picks.html && firefox picks.html &

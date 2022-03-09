@@ -1,0 +1,51 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Id$ nonnax 2022-02-27 02:37:42 +0800
+require './cbdb'
+require 'rubytools/numeric_ext'
+require 'rubytools/cache'
+require 'optparse'
+
+
+def reload
+  res = Cache.cached('reload', ttl: 300) do
+    p ['reloading...', IO.popen('./cget.rb', &:read).size ]
+  end 
+end
+
+loc, age, pick = ARGV
+opts =
+  %i[username location age is_new pick]
+  .zip([nil] * 4)
+  .to_h
+
+OptionParser.new do |o|
+  o.on '-n', '--username=[NAME_REGEXP]'
+  o.on '-w', '--location=[LOCATION_REGEXP]'
+  o.on '-a', '--age=[AGE_REGEXP]'
+  o.on '-p', '--pick'
+  o.on '-0', '--is_new'
+end.parse! into: opts
+
+opts => {username:, location:, age:, is_new:, pick:}
+q = { username:, location:, age:, is_new: }
+pick = opts[:pick]
+
+reload
+
+DB.cb do |db|
+  db.live_keys = db.live_keys & db.pick_keys if pick
+  live = db.each_slice
+  loop do
+    live
+      .next
+      .map { |e| e.last.as_hash }
+      .map do |h|
+      h[:age] = h[:age].to_i
+      h
+    end
+      .grep_hash(**q, &:all?)
+      .each { |h| puts h.values_at(:username, :age, :num_followers, :location, :image_url).join("\t") }
+  end
+end
