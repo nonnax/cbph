@@ -10,7 +10,7 @@ require 'optparse'
 
 def reload
   res = Cache.cached('reload', ttl: 300) do
-    p ['reloading...', IO.popen('./cget.rb', &:read).size ]
+    p ['reloading...', IO.popen('./cget.rb', &:read) ]
   end 
 end
 
@@ -40,7 +40,7 @@ DB.cb do |db|
   loop do
     live
       .next
-      .map { |e| e.last.as_hash }
+      .map { |e| e.last.j_to_h }
       .map do |h|
       h[:age] = h[:age].to_i
       h

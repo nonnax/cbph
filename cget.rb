@@ -76,7 +76,7 @@ class CBUpdater
   end
 
   def populate_df(i)
-    @monitor.synchronize do
+    Monitor.new.synchronize do
       row = []
       data = self.get(i * 500)
 

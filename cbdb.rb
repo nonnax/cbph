@@ -12,7 +12,7 @@ class String
   def as_hash
     JSON.parse(self, symbolize_names: true)
   end
-  alias :to_h :as_hash
+  alias :j_to_h :as_hash
 end
 
 class Model
