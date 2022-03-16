@@ -49,27 +49,25 @@ Cuba.class_eval do
         # link_(rel: 'stylesheet', type: 'text/css', href: '/css/style001.css')
       end
       body_ do        
-        div_( id: 'banner') do
-          ul_( id: 'home' ){
+        div_( id: 'header') do
+          ul_( class: 'navitem' ){
             li_ {a_( href: '/'){img_ id: 'logo', src: '/media/ca_eye.png'}}
             li_ {a_( href: '/'){h3_ { TITLE } }}
             li_ {span_{%(: Hi I'm X, and I'm a cam-o-holic :::...)}}
             # li_{ button_( type: 'button', onclick: "alert('Hello World')"){'click me'}}
           }          
-          div_( id: 'search' ) do
-            div_(class: 'new') do
-              ul_ do
-                groups.each do |k, v|
-                  class_name = root_path.match(k.to_s) ? 'current_page' : 'page'
-                  li_{a_(class: class_name, href: v){ k }} 
-               end
-              end
+          div_( class: 'navitem' ) do
+            ul_(class: 'category') do
+              groups.each do |k, v|
+                class_name = root_path.match(k.to_s) ? 'current_page' : 'page'
+                li_{a_(class: class_name, href: v){ k }} 
+             end
             end
-            div_(class: 'form') do
-              form_(action: '/search', method: 'get') do
-                input_(type: 'text', name: 'q' )
-                input_(type: 'submit', value: 'q')
-              end
+          end
+          div_( class: 'navitem' ) do
+            form_(action: '/search', method: 'get') do
+              input_(type: 'text', name: 'q' )
+              input_(type: 'submit', value: 'q')
             end
           end
         end
@@ -94,38 +92,39 @@ Cuba.class_eval do
 
   def montage(vrooms, page, offset = OFFSET)
     rooms = vrooms.uniq.sort_by { |r| r[NUM_FOLLOWERS].to_i }.reverse
-    div_ do
+    div_(id: 'grid') do
       page_start = (page * offset)
       rooms[(page_start)..(page_start + offset - 1)].map do |u|
           rec_id, image_url, username, location, age, current_show, is_hd, is_new, num_users, num_followers, chat_room_url_revshare = u
-            div_(class: 'grid') do
-              div_(class: 'center') do
-                a_(href: "/room/#{rec_id}", target: '_blank') do
-                  img_(src: image_url)
-                end
-              end
-              div_(class: 'user') do
-                ul_(class: 'basic') do
-                  li_ { username }
-                  li_ { a_(class: 'page', href: "/search/1/#{location}") { location } }
-                end
-                ul_(class: 'extra') do
-                  li_ { is_new=='true' ? NEW : OLD}
-                  li_ { num_followers }
-                  li_ { 
-                        if picklist.detect{|u| u.strip.match(username) }
-                          a_( href: "/pick/#{username}"){REMOVE}
-                        else
-                          a_( href: "/pick/#{username}"){ADD}
-                        end
-                      }
-                  
-                end
+            
+          div_(class: 'item') do
+            div_(class: 'center') do
+              a_(href: "/room/#{rec_id}", target: '_blank') do
+                img_(src: image_url)
               end
             end
+            div_(class: 'user') do
+              ul_(class: 'basic') do
+                li_ { username }
+                li_ { a_(class: 'page', href: "/search/1/#{location}") { location } }
+              end
+              ul_(class: 'extra') do
+                li_ { is_new=='true' ? NEW : OLD}
+                li_ { num_followers }
+                li_ { 
+                      if picklist.detect{|u| u.strip.match(username) }
+                        a_( href: "/pick/#{username}"){REMOVE}
+                      else
+                        a_( href: "/pick/#{username}"){ADD}
+                      end
+                    }
+                
+              end
+          end
       end
     end
   end
+end
 
   def _pagination(page=1, pages=10)
       path_root, path_page, q, = req.path.scan(/\w+/)

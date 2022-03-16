@@ -8,7 +8,7 @@ echo "(ctrl+c to stop)"
 while [ : ]
 do
   echo "loading... "
-  ./updatedbm.rb
+  ./get.rb
   echo "ready!"
-  sleep $((5*60))
+  sleep $((5*300))
 done
