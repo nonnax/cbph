@@ -164,18 +164,19 @@ end
   end
 
   def datastore
-    CSV.read('./data.csv')
+    CSV.read('data.csv')
   end
 
   def picklist
-    CSV.read('./upicks.csv').flatten
+    CSV.read('upicks.csv').flatten
   end
 
   def pick_toggle(username)
     fork do
       plist=picklist
       plist.include?(username) ? plist.delete(username) : plist.push(username) 
-      File.write('picklist', plist.join("\n"))
+      File.write('upicks.csv', plist.join("\n"))
+      File.write('lastpick.csv', username)
     end
   end
      

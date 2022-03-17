@@ -10,5 +10,6 @@ do
   echo "loading... "
   ./get.rb
   echo "ready!"
+  echo "sleeping for $((5*300)) mins"
   sleep $((5*300))
 done

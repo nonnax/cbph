@@ -62,8 +62,15 @@ img{
   width: 100%;  
 }
 .navitem{
-  flex: 300px;
+  flex: 30%;
 }
+
+ul.navitem li{
+  list-style: none;
+  margin-left: 5px; 
+  padding: 0;
+}
+
 #grid{
   display: flex;
   flex-wrap: wrap;
@@ -73,5 +80,35 @@ img{
 
 }
 .item{
-  flex: 200px;
+  flex: 20%;
+}
+
+.user{
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: row;
+  justify-content: left; 
+  width: 100%;
+
+}
+.basic, .extra{
+  flex: 50px;
+  padding: 0;
+  margin: 0;
+}
+ul.basic li, ul.extra li{
+  list-style: none;
+  margin-left: 5px; 
+  padding: 0;
+  /* display: block; */
+  /* float: left; */
+}
+
+.page, .current_page{
+  padding: 10px;
+}
+
+.current_page{
+  background: white;
+  color: black;
 }
